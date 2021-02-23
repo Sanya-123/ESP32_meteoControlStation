@@ -1,0 +1,68 @@
+[1/4] Performing build step for 'bootloader'
+ninja: no work to do.
+[1/2] cd /home/pi/Public/esp/esp-idf/components/esptool_py && /usr/bin/cmake -D IDF_PATH="/home/pi/Public/esp/esp-idf" -D ESPTOOLPY="/home/pi/.espressif/python_env/idf4.2_py3.7_env/bin/python /home/pi/Public/esp/esp-idf/components/esptool_py/esptool/esptool.py --chip esp32" -D ESPTOOL_ARGS="--before=default_reset --after=hard_reset write_flash @flash_args" -D WORKING_DIRECTORY="/home/pi/Public/esp/project/meteoCS/build" -P /home/pi/Public/esp/esp-idf/components/esptool_py/run_esptool.cmake
+esptool.py --chip esp32 -p /dev/ttyUSB0 -b 460800 --before=default_reset --after=hard_reset write_flash --flash_mode dio --flash_freq 40m --flash_size 2MB 0x8000 partition_table/partition-table.bin 0x1000 bootloader/bootloader.bin 0x10000 tcp_server.bin
+esptool.py v3.0-dev
+Serial port /dev/ttyUSB0
+Connecting........_
+Chip is ESP32D0WDQ5 (revision 1)
+Features: WiFi, BT, Single Core, VRef calibration in efuse, Coding Scheme None
+Crystal is 40MHz
+MAC: c4:4f:33:2d:b6:11
+Uploading stub...
+Running stub...
+Stub running...
+Changing baud rate to 460800
+Changed.
+Configuring flash size...
+Compressed 3072 bytes to 103...
+Writing at 0x00008000... (100 %)
+Wrote 3072 bytes (103 compressed) at 0x00008000 in 0.0 seconds (effective 4003.1 kbit/s)...
+Hash of data verified.
+Compressed 24912 bytes to 15239...
+Writing at 0x00001000... (100 %)
+Wrote 24912 bytes (15239 compressed) at 0x00001000 in 0.4 seconds (effective 560.3 kbit/s)...
+Hash of data verified.
+Compressed 766176 bytes to 487201...
+Writing at 0x00010000... (3 %)
+Writing at 0x00014000... (6 %)
+Writing at 0x00018000... (10 %)
+Writing at 0x0001c000... (13 %)
+Writing at 0x00020000... (16 %)
+Writing at 0x00024000... (20 %)
+Writing at 0x00028000... (23 %)
+Writing at 0x0002c000... (26 %)
+Writing at 0x00030000... (30 %)
+Writing at 0x00034000... (33 %)
+Writing at 0x00038000... (36 %)
+Writing at 0x0003c000... (40 %)
+Writing at 0x00040000... (43 %)
+Writing at 0x00044000... (46 %)
+Writing at 0x00048000... (50 %)
+Writing at 0x0004c000... (53 %)
+Writing at 0x00050000... (56 %)
+Writing at 0x00054000... (60 %)
+Writing at 0x00058000... (63 %)
+Writing at 0x0005c000... (66 %)
+Writing at 0x00060000... (70 %)
+Writing at 0x00064000... (73 %)
+Writing at 0x00068000... (76 %)
+Writing at 0x0006c000... (80 %)
+Writing at 0x00070000... (83 %)
+Writing at 0x00074000... (86 %)
+Writing at 0x00078000... (90 %)
+Writing at 0x0007c000... (93 %)
+Writing at 0x00080000... (96 %)
+Writing at 0x00084000... (100 %)
+Wrote 766176 bytes (487201 compressed) at 0x00010000 in 11.3 seconds (effective 541.0 kbit/s)...
+Hash of data verified.
+
+Leaving...
+Hard resetting via RTS pin...
+Executing action: flash
+Running ninja in directory /home/pi/Public/esp/project/meteoCS/build
+Executing "ninja flash"...
+Executing action: monitor
+Running idf_monitor in directory /home/pi/Public/esp/project/meteoCS
+Executing "/home/pi/.espressif/python_env/idf4.2_py3.7_env/bin/python /home/pi/Public/esp/esp-idf/tools/idf_monitor.py -p /dev/ttyUSB0 -b 115200 --toolchain-prefix xtensa-esp32-elf- /home/pi/Public/esp/project/meteoCS/build/tcp_server.elf -m '/home/pi/.espressif/python_env/idf4.2_py3.7_env/bin/python' '/home/pi/Public/esp/esp-idf/tools/idf.py' '-p' '/dev/ttyUSB0'"...
+Done

@@ -1,0 +1,3 @@
+[submodule "component/wifi_manager"]
+	path = component/wifi_manager
+	url = https://github.com/tonyp7/esp32-wifi-manager
