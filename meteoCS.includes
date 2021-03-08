@@ -94,6 +94,7 @@ IDF_PATH=/home/user/.esp/esp-idf
 /home/user/.esp/esp-idf/components/wear_levelling/include
 /home/user/.esp/esp-idf/components/wpa_supplicant/include
 /home/user/.esp/esp-idf/components/wpa_supplicant/port/include
+/home/user/.esp/esp-idf/components/mqtt/esp-mqtt/include
 
 /home/user/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/xtensa-esp32-elf/include
 /home/user/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/xtensa-esp32-elf/include/c++/5.2.0

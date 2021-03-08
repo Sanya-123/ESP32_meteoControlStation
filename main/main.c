@@ -39,6 +39,8 @@
 //#include "nrf24l01.h"
 #include "openWeather.h"
 
+#include "mqtt_client.h"
+
 
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_2) | (1ULL << GPIO_INPUT_IO_4) | (1ULL << GPIO_INPUT_IO_5) | (1ULL << GPIO_INPUT_IO_6))
@@ -188,7 +190,7 @@ void taskBME(void *p)
     {
         while(true)
         {
-            vTaskDelay(1000);
+            vTaskDelay(10000/portTICK_RATE_MS);
 
             com_rslt = bme280_read_uncomp_pressure_temperature_humidity(
                         &v_uncomp_pressure_s32, &v_uncomp_temperature_s32, &v_uncomp_humidity_s32);
@@ -401,11 +403,10 @@ void taskButton(void *p)
     }
 }
 
+uint16_t co2Val;
 void task_co2(void *p)
 {
     (void)p;
-
-    uint16_t co2Val;
 
     co2_init();
     vTaskDelay(10000/portTICK_RATE_MS);
@@ -525,6 +526,112 @@ void openWeatherTask(void *p)
     }
 }
 
+static void log_error_if_nonzero(const char * message, int error_code)
+{
+    if (error_code != 0) {
+        ESP_LOGE(TAG, "Last error %s: 0x%x", message, error_code);
+    }
+}
+
+static esp_err_t mqtt_event_handler_cb(esp_mqtt_event_handle_t event)
+{
+    esp_mqtt_client_handle_t client = event->client;
+    int msg_id;
+    // your_context_t *context = event->context;
+    switch (event->event_id) {
+        case MQTT_EVENT_CONNECTED:
+            ESP_LOGI("MQTT", "MQTT_EVENT_CONNECTED");
+            msg_id = esp_mqtt_client_publish(client, "/topic/qos1", "data_3", 0, 1, 0);
+            ESP_LOGI("MQTT", "sent publish successful, msg_id=%d", msg_id);
+
+            msg_id = esp_mqtt_client_subscribe(client, "/topic/qos0", 0);
+            ESP_LOGI("MQTT", "sent subscribe successful, msg_id=%d", msg_id);
+
+            msg_id = esp_mqtt_client_subscribe(client, "/topic/qos1", 1);
+            ESP_LOGI("MQTT", "sent subscribe successful, msg_id=%d", msg_id);
+
+            msg_id = esp_mqtt_client_unsubscribe(client, "/topic/qos1");
+            ESP_LOGI("MQTT", "sent unsubscribe successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_DISCONNECTED:
+            ESP_LOGI("MQTT", "MQTT_EVENT_DISCONNECTED");
+            break;
+
+        case MQTT_EVENT_SUBSCRIBED:
+            ESP_LOGI("MQTT", "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
+            msg_id = esp_mqtt_client_publish(client, "/topic/qos0", "data", 0, 0, 0);
+            ESP_LOGI("MQTT", "sent publish successful, msg_id=%d", msg_id);
+            break;
+        case MQTT_EVENT_UNSUBSCRIBED:
+            ESP_LOGI("MQTT", "MQTT_EVENT_UNSUBSCRIBED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_PUBLISHED:
+            ESP_LOGI("MQTT", "MQTT_EVENT_PUBLISHED, msg_id=%d", event->msg_id);
+            break;
+        case MQTT_EVENT_DATA:
+            ESP_LOGI("MQTT", "MQTT_EVENT_DATA");
+            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
+            printf("DATA=%.*s\r\n", event->data_len, event->data);
+            break;
+        case MQTT_EVENT_ERROR:
+            ESP_LOGI("MQTT", "MQTT_EVENT_ERROR");
+            if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+                log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
+                log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
+                log_error_if_nonzero("captured as transport's socket errno",  event->error_handle->esp_transport_sock_errno);
+                ESP_LOGI("MQTT", "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
+
+            }
+            break;
+        default:
+            ESP_LOGI("MQTT", "Other event id:%d", event->event_id);
+            break;
+    }
+    return ESP_OK;
+}
+
+static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_t event_id, void *event_data) {
+    ESP_LOGD("MQTT", "Event dispatched from event loop base=%s, event_id=%d", base, event_id);
+    mqtt_event_handler_cb(event_data);
+}
+
+void task_MQTT(void *p)
+{
+    vTaskDelay(10000/portTICK_RATE_MS);
+    ESP_LOGI("MQTT", "begin MQTT");
+
+    (void)p;
+    esp_mqtt_client_config_t mqtt_cfg = {
+        .uri = /*MQTT_SERVER*/"mqtt://192.168.0.16:1883",
+    };
+
+    esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
+    esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
+    esp_mqtt_client_start(client);
+
+    while(1)
+    {
+        vTaskDelay(10000/portTICK_RATE_MS);
+        char string[32];
+
+        sprintf(string, "%4d", (int)temp);
+        ESP_LOGI("MQTT", "publish temperature");
+        esp_mqtt_client_publish(client, "/meteoCS/temp0", string, 4, 0, 0);
+
+        sprintf(string, "%4d", (int)humidity);
+        ESP_LOGI("MQTT", "publish humidity");
+        esp_mqtt_client_publish(client, "/meteoCS/humidity0", string, 4, 0, 0);
+
+        sprintf(string, "%4d", (int)pressure);
+        ESP_LOGI("MQTT", "publish pressure");
+        esp_mqtt_client_publish(client, "/meteoCS/pressure0", string, 4, 0, 0);
+
+        sprintf(string, "%4d", (int)co2Val);
+        ESP_LOGI("MQTT", "publish co2Val");
+        esp_mqtt_client_publish(client, "/meteoCS/CO2", string, 4, 0, 0);
+    }
+}
+
 static uint16_t pixelRead[10][10];
 
 void app_main(void)
@@ -549,6 +656,7 @@ void app_main(void)
 //    xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
 //    xTaskCreate(nRF24_task, "nrf", 2048, NULL, 2, NULL);
+    xTaskCreate(task_MQTT, "MQTT", 2048, NULL, 2, NULL);
 
 
 

@@ -22,5 +22,10 @@ menu "control stationconfig"
         help
             Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
 
+    config MQTT_SERVER
+        string "MQTT server"
+        default "192.168.0.16:1883"
+        help
+            MQTT server addres
 
 endmenu
