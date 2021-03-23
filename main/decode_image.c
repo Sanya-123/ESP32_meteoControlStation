@@ -40,6 +40,13 @@ extern const uint8_t temp1_jpg_end[] asm("_binary_temperature1_jpg_end");
 
 extern const uint8_t co2_jpg_start[] asm("_binary_co2_jpg_start");
 extern const uint8_t co2_jpg_end[] asm("_binary_co2_jpg_end");
+
+extern const uint8_t im1_jpg_start[] asm("_binary_im1_jpg_start");
+extern const uint8_t im1_jpg_end[] asm("_binary_im1_jpg_end");
+
+extern const uint8_t im2_jpg_start[] asm("_binary_im2_jpg_start");
+extern const uint8_t im2_jpg_end[] asm("_binary_im2_jpg_end");
+
 //Define the height and width of the jpeg file. Make sure this matches the actual jpeg
 //dimensions.
 #define IMAGE_W 336
@@ -114,6 +121,9 @@ esp_err_t decode_image(uint16_t ***pixels, Image im)
     	case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp0_jpg_start; break;
     	case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp1_jpg_start; break;
         case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; jd.inData = co2_jpg_start; break;
+
+        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; jd.inData = im1_jpg_start; break;
+        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; jd.inData = im2_jpg_start; break;
     	default:goto err;
     
     }
@@ -175,4 +185,28 @@ err:
     }
     free(work);
     return ret;
+}
+
+void free_image(uint16_t ***pixels, Image im)
+{
+    //Alocate pixel memory. Each line is an array of IMAGE_W 16-bit pixels; the `*pixels` array itself contains pointers to these lines.
+    switch(im)
+    {
+        case(imager): heightPixel = IMAGE_H;  widthPixel = IMAGE_W; break;
+        case(hum0): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
+        case(hum1): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
+        case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
+        case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
+        case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; break;
+
+        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; break;
+        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; break;
+        default:return;
+
+    }
+
+    for (int i = 0; i < heightPixel; i++) {
+        free((*pixels)[i]);
+    }
+    free((*pixels));
 }

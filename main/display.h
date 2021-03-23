@@ -28,4 +28,7 @@ void setTerm(int16_t val);
 void setPa(uint16_t val);
 void setCO2(uint16_t val);
 
+void print_im1();
+void print_im2();
+
 //TODO drawFormOpenWeather

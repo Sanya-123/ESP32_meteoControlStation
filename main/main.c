@@ -43,14 +43,14 @@
 
 
 
-#define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_2) | (1ULL << GPIO_INPUT_IO_4) | (1ULL << GPIO_INPUT_IO_5) | (1ULL << GPIO_INPUT_IO_6))
+#define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_3) | (1ULL << GPIO_INPUT_IO_4))
 
-#define GPIO_MENU           GPIO_INPUT_IO_5
-#define GPIO_BACK           GPIO_INPUT_IO_6
-#define GPIO_UP             GPIO_INPUT_IO_1
-#define GPIO_DOWN           GPIO_INPUT_IO_4
+#define GPIO_MENU           GPIO_INPUT_IO_3
+#define GPIO_BACK           GPIO_INPUT_IO_4
+//#define GPIO_UP             GPIO_INPUT_IO_1
+//#define GPIO_DOWN           GPIO_INPUT_IO_4
 #define GPIO_RIGHT          GPIO_INPUT_IO_2
-#define GPIO_LEFT           GPIO_INPUT_IO_3
+#define GPIO_LEFT           GPIO_INPUT_IO_1
 
 
 const char *TAG = "meteoCS";
@@ -137,6 +137,7 @@ void BME280_delay_msek(u32 msek)
 }
 
 double temp = 0.0, pressure = 0.0, humidity = 0.0;
+uint16_t co2Val;
 
 int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
 {
@@ -274,7 +275,7 @@ void taskDisplay(void *p)
 
 //    char buff[100];
 
-    setCO2(2500);
+    setCO2(0);
 
     while(1)
     {
@@ -299,6 +300,7 @@ void taskDisplay(void *p)
         setTerm(temp);
         setPa(pressure);
 //        setCO2(co2);
+        setCO2(co2Val);
 
         vTaskDelay(5000/portTICK_RATE_MS);
 
@@ -317,6 +319,24 @@ void taskDisplay(void *p)
     }
 }
 
+void initOutGPIO()
+{
+    gpio_config_t io_conf;
+    //disable interrupt
+    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+    //set as output mode
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    //bit mask of the pins that you want to set,e.g.GPIO18/19
+    io_conf.pin_bit_mask = ((1ULL << GPIO_LED_GREEN) | (1ULL << GPIO_LED_YELLOW) | \
+                            (1ULL << GPIO_LED_ORANGE) | 1ULL << GPIO_LED_RED);
+    //disable pull-down mode
+    io_conf.pull_down_en = 0;
+    //disable pull-up mode
+    io_conf.pull_up_en = 0;
+    //configure GPIO with the given settings
+    gpio_config(&io_conf);
+}
+
 void taskButton(void *p)
 {
     (void)p;
@@ -327,21 +347,21 @@ void taskButton(void *p)
     //set as output mode
     io_conf.mode = GPIO_MODE_INPUT;
     //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL | 0x01/*gpio0*/;
+    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
     //disable pull-down mode
-    io_conf.pull_down_en = 1;
+    io_conf.pull_down_en = 0;
     //disable pull-up mode
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
 
     gpio_set_direction(GPIO_INPUT_IO_1, GPIO_MODE_INPUT);
-    gpio_pulldown_en(GPIO_INPUT_IO_1);
+    gpio_pulldown_dis(GPIO_INPUT_IO_1);
     gpio_pullup_dis(GPIO_INPUT_IO_1);
 
-    gpio_set_direction(GPIO_INPUT_IO_3, GPIO_MODE_INPUT);
-    gpio_pulldown_en(GPIO_INPUT_IO_3);
-    gpio_pullup_dis(GPIO_INPUT_IO_3);
+    gpio_set_direction(GPIO_INPUT_IO_2, GPIO_MODE_INPUT);
+    gpio_pulldown_dis(GPIO_INPUT_IO_2);
+    gpio_pullup_dis(GPIO_INPUT_IO_2);
 
     bool oldBup = false, oldBleft = false, oldBright = false, oldBdown = false, oldBmenu = false, oldBback = false, oldB0 = false;
     bool Bup = false, Bleft = false, Bright = false, Bdown = false, Bmenu = false, Bback = false, B0 = false;
@@ -350,60 +370,54 @@ void taskButton(void *p)
     {
         vTaskDelay(50/portTICK_RATE_MS);
 
-        Bup = gpio_get_level(GPIO_UP);
-        Bright = gpio_get_level(GPIO_RIGHT);
+        Bright = !gpio_get_level(GPIO_RIGHT);
         Bleft = gpio_get_level(GPIO_LEFT);
-        Bdown = gpio_get_level(GPIO_DOWN);
         Bmenu = gpio_get_level(GPIO_MENU);
         Bback = gpio_get_level(GPIO_BACK);
 
-        B0 = gpio_get_level(0);
 
-        if(oldBup != Bup)//-
-        {
-            oldBup = Bup;
-            ESP_LOGI("BUTTON", "up if %s", Bup ? "UP" : "DOWN");
-        }
-
-        if(oldBleft != Bleft)//-
+        if(oldBleft != Bleft)
         {
             oldBleft = Bleft;
-            ESP_LOGI("BUTTON", "left if %s", Bleft ? "UP" : "DOWN");
+            ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
+            gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
+//            if(Bleft)
+//            {
+//                print_im1();
+//            }
         }
 
         if(oldBright != Bright)
         {
             oldBright = Bright;
-            ESP_LOGI("BUTTON", "right if %s", Bright ? "UP" : "DOWN");
-        }
-
-        if(oldBdown != Bdown)
-        {
-            oldBdown = Bdown;
-            ESP_LOGI("BUTTON", "down if %s", Bdown ? "UP" : "DOWN");
+            ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
+            gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
+//            if(Bright)
+//            {
+//                print_im2();
+//            }
         }
 
         if(oldBmenu != Bmenu)
         {
             oldBmenu = Bmenu;
-            ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "UP" : "DOWN");
+            ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
+            gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
         }
 
         if(oldBback != Bback)
         {
             oldBback = Bback;
-            ESP_LOGI("BUTTON", "back if %s", Bback ? "UP" : "DOWN");
-        }
+            ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
+            gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
 
-        if(oldB0 != B0)
-        {
-            oldB0 = B0;
-            ESP_LOGI("BUTTON", "B0 if %s", B0 ? "UP" : "DOWN");
+            ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+            ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+            ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
         }
     }
 }
 
-uint16_t co2Val;
 void task_co2(void *p)
 {
     (void)p;
@@ -414,7 +428,7 @@ void task_co2(void *p)
     while(1)
     {
         co2Val = co2_read();
-        setCO2(co2Val);
+//        setCO2(co2Val);
         ESP_LOGI("CO2", "CO2 %d", co2Val);
         vTaskDelay(60000/portTICK_RATE_MS);
     }
@@ -597,38 +611,45 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
 void task_MQTT(void *p)
 {
+    xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
+
     vTaskDelay(10000/portTICK_RATE_MS);
     ESP_LOGI("MQTT", "begin MQTT");
 
     (void)p;
     esp_mqtt_client_config_t mqtt_cfg = {
-        .uri = /*MQTT_SERVER*/"mqtt://192.168.0.16:1883",
+        .uri = CONFIG_MQTT_SERVER/*"mqtt://192.168.0.100:1883"*/,
     };
 
     esp_mqtt_client_handle_t client = esp_mqtt_client_init(&mqtt_cfg);
     esp_mqtt_client_register_event(client, ESP_EVENT_ANY_ID, mqtt_event_handler, client);
     esp_mqtt_client_start(client);
 
+
     while(1)
     {
         vTaskDelay(10000/portTICK_RATE_MS);
-        char string[32];
+        char string[32] = {0};
 
-        sprintf(string, "%4d", (int)temp);
+        memset(string, 0, 32);
+        sprintf(string, "%d", (int)temp);
         ESP_LOGI("MQTT", "publish temperature");
-        esp_mqtt_client_publish(client, "/meteoCS/temp0", string, 4, 0, 0);
+        esp_mqtt_client_publish(client, "/meteoCS/temp0", string, strlen(string), 0, 0);
 
-        sprintf(string, "%4d", (int)humidity);
+        memset(string, 0, 32);
+        sprintf(string, "%d", (int)humidity);
         ESP_LOGI("MQTT", "publish humidity");
-        esp_mqtt_client_publish(client, "/meteoCS/humidity0", string, 4, 0, 0);
+        esp_mqtt_client_publish(client, "/meteoCS/humidity0", string, strlen(string), 0, 0);
 
-        sprintf(string, "%4d", (int)pressure);
+        memset(string, 0, 32);
+        sprintf(string, "%d", (int)pressure);
         ESP_LOGI("MQTT", "publish pressure");
-        esp_mqtt_client_publish(client, "/meteoCS/pressure0", string, 4, 0, 0);
+        esp_mqtt_client_publish(client, "/meteoCS/pressure0", string, strlen(string), 0, 0);
 
-        sprintf(string, "%4d", (int)co2Val);
+        memset(string, 0, 32);
+        sprintf(string, "%d", (int)co2Val);
         ESP_LOGI("MQTT", "publish co2Val");
-        esp_mqtt_client_publish(client, "/meteoCS/CO2", string, 4, 0, 0);
+        esp_mqtt_client_publish(client, "/meteoCS/CO2", string, strlen(string), 0, 0);
     }
 }
 
@@ -636,9 +657,23 @@ static uint16_t pixelRead[10][10];
 
 void app_main(void)
 {
+    esp_log_level_set("MQTT", ESP_LOG_NONE);
+    esp_log_level_set("wifi_manager", ESP_LOG_NONE);
+    esp_log_level_set("weathe:", ESP_LOG_NONE);
+    esp_log_level_set("TRANS_TCP", ESP_LOG_NONE);
+    esp_log_level_set("MQTT_CLIENT", ESP_LOG_NONE);
+
+    initOutGPIO();
+
+//    esp_log_level_set("CO2", ESP_LOG_VERBOSE);
+//    esp_log_level_set("CO2", ESP_LOG_DEBUG);
+//    esp_log_level_set("CO2", ESP_LOG_INFO);
+//    esp_log_level_set("CO2", ESP_LOG_WARN);
+//    esp_log_level_set("CO2", ESP_LOG_ERROR);
+
+
     s_wifi_event_group = xEventGroupCreate();
     initDisplay();
-
 
 
 //    ESP_LOGI(TAG, "Read display");
@@ -649,14 +684,13 @@ void app_main(void)
 //    send_picturte(150, 100, 10, 10, pixelRead);
 //    ESP_LOGI(TAG, "Write display OK");
 
-
-//    xTaskCreate(openWeatherTask, "openWeathre_reque", 4096, NULL, 1, NULL);
+//    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 3, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
-//    xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
+    xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
 //    xTaskCreate(nRF24_task, "nrf", 2048, NULL, 2, NULL);
-    xTaskCreate(task_MQTT, "MQTT", 2048, NULL, 2, NULL);
+    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
 
 
 

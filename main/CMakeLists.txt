@@ -12,7 +12,7 @@ set(SOURCE "main.c" "net.c" "bme280_ok.c" "ST7735.c" "display.c" "uart2.c" "mh-z
 #            "./spiffs/esp_spiffs.c" "./spiffs/list.c" "./spiffs/mutex.c" "./spiffs/spiffs_cache.c" "./spiffs/spiffs_check.c"
 #            "./spiffs/spiffs_gc.c" "./spiffs/spiffs_hydrogen.c" "./spiffs/spiffs_nucleus.c" "./spiffs/spiffs_vfs.c"
 
-set(img images/imager.jpg images/humidity0.jpg images/humidity1.jpg images/temperature0.jpg images/temperature1.jpg images/co2.jpg)
+set(img images/imager.jpg images/humidity0.jpg images/humidity1.jpg images/temperature0.jpg images/temperature1.jpg images/co2.jpg images/im1.jpg images/im2.jpg)
 
 idf_component_register(SRCS ${SOURCE}
                     INCLUDE_DIRS "." "./esp_request/include"

@@ -40,6 +40,9 @@ uint16_t **pixels_temp1;
 
 uint16_t **pixels_co2;
 
+uint16_t **pixels_im1;
+uint16_t **pixels_im2;
+
 void initDisplay()
 {
     tft_init();
@@ -64,11 +67,27 @@ void initDisplay()
        ESP_LOGI("Display", "Can't ionit picture co2");
     }
 
+//    if(decode_image(&pixels_im1, Im1))
+//    {
+//       ESP_LOGI("Display", "Can't ionit picture Im1");
+//    }
+//    if(decode_image(&pixels_im2, Im2))
+//    {
+//       ESP_LOGI("Display", "Can't ionit picture Im2");
+//    }
+
     tft_fill_screen(DEFOULE_COLOR);
     
     send_picturte(X_HUMIDITI, Y_HUMIDITI, HUMIDITY_W, HUMIDITY_H, pixels_hum1);
     send_picturte(X_TERM, Y_TERM, TEMPERATURE_W, TEMPERATURE_H, pixels_temp1);
     send_picturte(X_CO2, Y_CO2, CO2_W, CO2_H, pixels_co2);
+
+//    if(decode_image(&pixels_im2, Im2))
+//    {
+//        ESP_LOGI("Display", "Can't ionit picture Im2");
+//    }
+//    send_picturte(20, 20, IM1_W, IM1_H, pixels_im1);
+//    free_image(&pixels_im1, Im1);
     
     stateD = stateMainForm;
 }
@@ -202,4 +221,32 @@ void setCO2(uint16_t val)
     sprintf(buff, "%4d", val);
 
     tft_draw_string(X_CO2_VAL, Y_CO2_VAL, buff, 0xFFFF, 0x0000, 4);
+}
+
+void print_im1()
+{
+    tft_fill_screen(DEFOULE_COLOR);
+    if(decode_image(&pixels_im1, Im1))
+    {
+        ESP_LOGI("Display", "Can't ionit picture Im1");
+    }
+    else
+    {
+        send_picturte(20, 20, IM1_W, IM1_H, pixels_im1);
+        free_image(&pixels_im1, Im1);
+    }
+}
+
+void print_im2()
+{
+    tft_fill_screen(DEFOULE_COLOR);
+    if(decode_image(&pixels_im2, Im2))
+    {
+        ESP_LOGI("Display", "Can't ionit picture Im2");
+    }
+    else
+    {
+        send_picturte(20, 20, IM2_W, IM2_H, pixels_im2);
+        free_image(&pixels_im2, Im2);
+    }
 }

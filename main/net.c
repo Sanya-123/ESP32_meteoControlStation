@@ -250,9 +250,17 @@ void wifi_init_sta(void *p)
     vTaskDelete(NULL);
 }
 
+void wifi_connect_to_ap(void *arg)
+{
+    (void)arg;
+    ESP_LOGI("WIFI", "**************************Connect To AP**************************");
+    xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+}
+
 void startNet()
 {
     wifi_manager_start();
+    wifi_manager_set_callback(WM_EVENT_STA_GOT_IP, wifi_connect_to_ap);
 }
 
 

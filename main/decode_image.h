@@ -20,6 +20,12 @@
 #define CO2_W 120
 #define CO2_H 120
 
+#define IM1_W   200
+#define IM1_H   137
+
+#define IM2_W   200
+#define IM2_H   200
+
 typedef enum{
 	imager,
 	hum0,
@@ -27,6 +33,9 @@ typedef enum{
 	temp0,
 	temp1,
     CO2,
+
+    Im1,
+    Im2
 }Image;
 
 
@@ -40,3 +49,5 @@ typedef enum{
  *         - ESP_OK on succesful decode
  */
 esp_err_t decode_image(uint16_t ***pixels, Image im);
+
+void free_image(uint16_t ***pixels, Image im);
