@@ -23,6 +23,6 @@
 #define GPIO_LED_ORANGE     25
 #define GPIO_LED_RED        26
 
-#define GPIO_EN_CO2         35
+#define GPIO_EN_CO2         12
 
 #endif //GPIO_DEF_H

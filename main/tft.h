@@ -14,6 +14,17 @@
 #include "ascii_font.h"
 #include "gpioDEF.h"
 
+#define ST7735_TFTWIDTH_128 128   // for 1.44 and mini
+#define ST7735_TFTWIDTH_80 80     // for mini
+#define ST7735_TFTHEIGHT_128 128  // for 1.44" display
+#define ST7735_TFTHEIGHT_160 160  // for 1.8" and mini display
+
+#define LCD_WIDTH 320
+#define LCD_HEIGHT 240
+
+#define ILI9488_WIDTH  320	//y
+#define ILI9488_HEIGHT 480	//x
+
 #define OFFSET_X    /*0x02*/0
 #define OFFSET_Y    /*0x01*/0
 
@@ -58,12 +69,12 @@
 // Some ready-made 16-bit (RGB-565) color settings:
 #define	COLOR_BLACK      0x0000
 #define COLOR_WHITE      0xFFFF
-#define	COLOR_RED        0xF800
+#define	COLOR_RED        0x07E0
 #define	COLOR_GREEN      0x001F
-#define	COLOR_BLUE       0x07E0
-#define COLOR_CYAN       0x07FF
+#define	COLOR_BLUE       0xF800
+#define COLOR_CYAN       0xF81F
 #define COLOR_MAGENTA    0xFFE0
-#define COLOR_YELLOW     0xF81F
+#define COLOR_YELLOW     0x07FF
 #define	COLOR_GRAY       0x8410
 #define	COLOR_OLIVE      0x8011
 //#define	COLOR_OLIVE      0x8400

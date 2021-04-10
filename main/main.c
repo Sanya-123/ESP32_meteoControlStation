@@ -217,7 +217,7 @@ void taskBME(void *p)
     vTaskDelete(NULL);
 }
 
-#include "ST7735.h"
+#include "tft.h"
 
 void taskDisplay(void *p)
 {
@@ -299,7 +299,6 @@ void taskDisplay(void *p)
         setHumiditi(humidity);
         setTerm(temp);
         setPa(pressure);
-//        setCO2(co2);
         setCO2(co2Val);
 
         vTaskDelay(5000/portTICK_RATE_MS);
@@ -328,7 +327,7 @@ void initOutGPIO()
     io_conf.mode = GPIO_MODE_OUTPUT;
     //bit mask of the pins that you want to set,e.g.GPIO18/19
     io_conf.pin_bit_mask = ((1ULL << GPIO_LED_GREEN) | (1ULL << GPIO_LED_YELLOW) | \
-                            (1ULL << GPIO_LED_ORANGE) | 1ULL << GPIO_LED_RED);
+                            (1ULL << GPIO_LED_ORANGE) | ( 1ULL << GPIO_LED_RED) | (1ULL << GPIO_EN_CO2));
     //disable pull-down mode
     io_conf.pull_down_en = 0;
     //disable pull-up mode
@@ -341,27 +340,35 @@ void taskButton(void *p)
 {
     (void)p;
 
-    gpio_config_t io_conf;
-    //disable interrupt
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    //set as output mode
-    io_conf.mode = GPIO_MODE_INPUT;
-    //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
-    //disable pull-down mode
-    io_conf.pull_down_en = 0;
-    //disable pull-up mode
-    io_conf.pull_up_en = 0;
-    //configure GPIO with the given settings
-    gpio_config(&io_conf);
+//    gpio_config_t io_conf;
+//    //disable interrupt
+//    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+//    //set as output mode
+//    io_conf.mode = GPIO_MODE_INPUT;
+//    //bit mask of the pins that you want to set,e.g.GPIO18/19
+//    io_conf.pin_bit_mask = GPIO_INPUT_PIN_SEL;
+//    //disable pull-down mode
+//    io_conf.pull_down_en = 0;
+//    //disable pull-up mode
+//    io_conf.pull_up_en = 0;
+//    //configure GPIO with the given settings
+//    gpio_config(&io_conf);
 
-    gpio_set_direction(GPIO_INPUT_IO_1, GPIO_MODE_INPUT);
-    gpio_pulldown_dis(GPIO_INPUT_IO_1);
-    gpio_pullup_dis(GPIO_INPUT_IO_1);
+    gpio_set_direction(GPIO_LEFT, GPIO_MODE_INPUT);
+    gpio_pulldown_dis(GPIO_LEFT);
+    gpio_pullup_dis(GPIO_LEFT);
 
-    gpio_set_direction(GPIO_INPUT_IO_2, GPIO_MODE_INPUT);
-    gpio_pulldown_dis(GPIO_INPUT_IO_2);
-    gpio_pullup_dis(GPIO_INPUT_IO_2);
+    gpio_set_direction(GPIO_RIGHT, GPIO_MODE_INPUT);
+    gpio_pulldown_dis(GPIO_RIGHT);
+    gpio_pullup_dis(GPIO_RIGHT);
+
+    gpio_set_direction(GPIO_MENU, GPIO_MODE_INPUT);
+    gpio_pulldown_dis(GPIO_MENU);
+    gpio_pullup_dis(GPIO_MENU);
+
+    gpio_set_direction(GPIO_BACK, GPIO_MODE_INPUT);
+    gpio_pulldown_dis(GPIO_BACK);
+    gpio_pullup_dis(GPIO_BACK);
 
     bool oldBup = false, oldBleft = false, oldBright = false, oldBdown = false, oldBmenu = false, oldBback = false, oldB0 = false;
     bool Bup = false, Bleft = false, Bright = false, Bdown = false, Bmenu = false, Bback = false, B0 = false;
@@ -370,9 +377,9 @@ void taskButton(void *p)
     {
         vTaskDelay(50/portTICK_RATE_MS);
 
-        Bright = !gpio_get_level(GPIO_RIGHT);
+        Bright = gpio_get_level(GPIO_RIGHT);
         Bleft = gpio_get_level(GPIO_LEFT);
-        Bmenu = gpio_get_level(GPIO_MENU);
+        Bmenu = !gpio_get_level(GPIO_MENU);
         Bback = gpio_get_level(GPIO_BACK);
 
 
@@ -381,10 +388,15 @@ void taskButton(void *p)
             oldBleft = Bleft;
             ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
-//            if(Bleft)
-//            {
+            if(Bleft)
+            {
+                drawMainForm();
+                setHumiditi(humidity);
+                setTerm(temp);
+                setPa(pressure);
+                setCO2(co2Val);
 //                print_im1();
-//            }
+            }
         }
 
         if(oldBright != Bright)
@@ -392,10 +404,15 @@ void taskButton(void *p)
             oldBright = Bright;
             ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
-//            if(Bright)
-//            {
+            if(Bright)
+            {
+                drawDipForm();
+                setHumiditi(humidity);
+                setTerm(temp);
+                setPa(pressure);
+                setCO2(co2Val);
 //                print_im2();
-//            }
+            }
         }
 
         if(oldBmenu != Bmenu)
@@ -411,6 +428,11 @@ void taskButton(void *p)
             ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
 
+            if(Bback)
+            {
+                drawDip2Form();
+            }
+
             ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
             ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
             ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
@@ -421,15 +443,32 @@ void taskButton(void *p)
 void task_co2(void *p)
 {
     (void)p;
+    
+    gpio_set_level(GPIO_EN_CO2, 1);
 
     co2_init();
     vTaskDelay(10000/portTICK_RATE_MS);
+    
+    
 
     while(1)
     {
-        co2Val = co2_read();
-//        setCO2(co2Val);
-        ESP_LOGI("CO2", "CO2 %d", co2Val);
+        gpio_set_level(GPIO_EN_CO2, 1);
+        
+        vTaskDelay(10000/portTICK_RATE_MS);
+
+        co2_init();
+        vTaskDelay(240000/portTICK_RATE_MS);
+        co2_read();
+        //vTaskDelay(240000/portTICK_RATE_MS);
+//        for(int i = 0; i < 60; i++)
+        while(1)
+        {
+            co2Val = co2_read();
+            ESP_LOGI("CO2", "CO2 %d", co2Val);
+            vTaskDelay(60000/portTICK_RATE_MS);
+        }
+        gpio_set_level(GPIO_EN_CO2, 0);
         vTaskDelay(60000/portTICK_RATE_MS);
     }
 

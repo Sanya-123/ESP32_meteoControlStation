@@ -16,17 +16,23 @@ enum stateDisplay{
     stateMainForm,          //CO2 humiditi temperature pressure
     stateWeather,           //some data from open weather
     stateExternWeather,     //data from NRF
-    stateImputWIFI,         //change wifi and input passworld wifi
+//    stateImputWIFI,         //change wifi and input passworld wifi
+    stateDipForm,           //Form that divired on range
+    stateDip2Form,          //Form that divired on range
 };
 
 
 void initDisplay();
 void drawMainForm();
+void drawDipForm();
+void drawDip2Form();
 void drawunfillRectangle(int16_t x, int16_t y, int16_t w, int16_t h, int16_t s, uint16_t color, uint16_t colorBG);
 void setHumiditi(uint16_t val);
 void setTerm(int16_t val);
 void setPa(uint16_t val);
 void setCO2(uint16_t val);
+
+//void printOpenWheather();
 
 void print_im1();
 void print_im2();

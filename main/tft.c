@@ -1,5 +1,5 @@
 
-#include "ST7735.h"
+#include "tft.h"
 
 /*
  The LCD needs a bunch of command/argument values to be initialized. They are stored in this struct.
@@ -11,17 +11,6 @@
 } lcd_init_cmd_t;*/
 
 static spi_device_handle_t spi_dev;
-
-#define ST7735_TFTWIDTH_128 128   // for 1.44 and mini
-#define ST7735_TFTWIDTH_80 80     // for mini
-#define ST7735_TFTHEIGHT_128 128  // for 1.44" display
-#define ST7735_TFTHEIGHT_160 160  // for 1.8" and mini display
-
-#define LCD_WIDTH 320
-#define LCD_HEIGHT 240
-
-#define ILI9488_WIDTH  320	//y
-#define ILI9488_HEIGHT 480	//x
 
 // ST77XX commands
 #define ST_CMD_DELAY 0x80  // special signifier for command lists
@@ -155,7 +144,7 @@ static spi_device_handle_t spi_dev;
 #define MADCTL_BGR 0x08
 #define MADCTL_MH  0x04
 
-#define PARARELL_LINE       (LCD_HEIGHT / 4)
+#define PARARELL_LINE       (LCD_HEIGHT / 12)
 
 // RGB-565 16bit, 128*160;
 static uint8_t display_buff[LCD_WIDTH * PARARELL_LINE * 2];
@@ -542,7 +531,7 @@ void send_picturte(int xpos, int ypos, int W, int H, uint16_t **picture)
     for(int i = 0; i < H; i++)
     {
     
-	send_picturte_line(xpos, ypos + H - 1 - i, W, 1, picture[i]);
+        send_picturte_line(xpos, ypos + H - 1 - i, W, 1, picture[i]);
 	//send_line_finish();
     }
 }
@@ -635,15 +624,34 @@ void tft_rect(int16_t x, int16_t y, int16_t w, int16_t h, uint16_t color) {
     if ((x + w - 1) >= LCD_WIDTH) w = LCD_WIDTH - x;
     if ((y + h - 1) >= LCD_HEIGHT) h = LCD_HEIGHT - y;
 
-    tft_set_address_window(x, y, x + w - 1, y + h - 1);
-
     //lcd_cmd(spi_dev, ST77XX_RAMWR);
 
-    for (int i = 0; i < (w * h * 2); i+=2) {
-        display_buff[i] = color & 0xFF;
-        display_buff[i + 1] = (color >> 8);
+//    int i = 0;
+//    for(i = 0; i < h; i += PARARELL_LINE)
+//    {
+
+    if((w * h * 2) <= (LCD_WIDTH * PARARELL_LINE * 2))
+    {
+        tft_set_address_window(x, y, x + w - 1, y + h - 1);
+        for (int i = 0; i < (w * h * 2); i+=2) {
+            display_buff[i] = color & 0xFF;
+            display_buff[i + 1] = (color >> 8);
+        }
+        lcd_data(spi_dev, display_buff, w * h * 2);
     }
-    lcd_data(spi_dev, display_buff, w * h * 2);
+    else
+    {
+        for (int i = 0; i < (w * 1 * 2); i+=2) {
+            display_buff[i] = color & 0xFF;
+            display_buff[i + 1] = (color >> 8);
+        }
+        for(int i = 0; i < h; i++)
+        {
+            tft_set_address_window(x, y + i, x + w - 1, y + i);
+            lcd_data(spi_dev, display_buff, w * 1 * 2);
+        }
+
+    }
 }
 
 void tft_invert_color(int i) {
@@ -663,13 +671,13 @@ void tft_init() {
         .sclk_io_num=PIN_NUM_CLK,
         .quadwp_io_num=-1,
         .quadhd_io_num=-1,
-        .max_transfer_sz=ILI9488_HEIGHT*ILI9488_WIDTH*2/2+8
+        .max_transfer_sz=LCD_HEIGHT*LCD_WIDTH*2/2+8
     };
     spi_device_interface_config_t devcfg={
 #ifdef CONFIG_LCD_OVERCLOCK
         .clock_speed_hz=26*1000*1000,           //Clock out at 26 MHz
 #else
-        .clock_speed_hz=10*1000*1000,           //Clock out at 10 MHz
+        .clock_speed_hz=26*1000*1000,           //Clock out at 10 MHz
 #endif
         .mode=0,                                //SPI mode 0
         .spics_io_num=PIN_NUM_CS,               //CS pin
@@ -691,7 +699,7 @@ void tft_draw_pixel(int16_t x, int16_t y, uint16_t color) {
 
     display_buff[0] = color & 0xFF;
     display_buff[1] = color >> 8;
-    tft_set_address_window(x, y, 1, 1);
+    tft_set_address_window(x, y, x, y);
     lcd_data(spi_dev, display_buff, 2);
 }
 

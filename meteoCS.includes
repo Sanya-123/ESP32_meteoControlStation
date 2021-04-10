@@ -54,6 +54,7 @@ IDF_PATH=/home/user/.esp/esp-idf
 /home/user/.esp/esp-idf/components/driver/include/driver
 /home/user/.esp/esp-idf/components/esp_adc_cal/include
 /home/user/.esp/esp-idf/components/esp32/include
+/home/user/.esp/esp-idf/components/esp_system/include
 /home/user/.esp/esp-idf/components/ethernet/include
 /home/user/.esp/esp-idf/components/expat/include/expat
 /home/user/.esp/esp-idf/components/expat/port/include

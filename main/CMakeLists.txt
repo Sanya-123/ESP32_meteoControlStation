@@ -1,4 +1,4 @@
-set(SOURCE "main.c" "net.c" "bme280_ok.c" "ST7735.c" "display.c" "uart2.c" "mh-z19.c"
+set(SOURCE "main.c" "net.c" "bme280_ok.c" "tft.c" "display.c" "uart2.c" "mh-z19.c"
 "./esp_request/esp_request.c" "./esp_request/req_list.c" "./esp_request/uri_parser.c" "./nrf24l01.c"
 "./cJSON/cJSON_Utils.c" "./cJSON/cJSON.c" "openWeather.c" "tjpgd.c" "decode_image.c"
 )
