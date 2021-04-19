@@ -11,6 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "freertos/event_groups.h"
+#include "freertos/semphr.h"
 #include "esp_system.h"
 #include "esp_log.h"
 //#include "soc/rtc.h"
@@ -20,6 +21,8 @@
 #include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "nvs_flash.h"
+#include "driver/mcpwm.h"
+#include "soc/mcpwm_periph.h"
 
 #include "gpioDEF.h"
 
@@ -56,6 +59,9 @@
 const char *TAG = "meteoCS";
 
 OpenWeather weather;
+static SemaphoreHandle_t semaphoreDisplayChange;
+static enum stateDisplay stateDis = stateDip2Form;
+
 
 #define I2C_MASTER_ACK 0
 #define I2C_MASTER_NACK 1
@@ -224,97 +230,37 @@ void taskDisplay(void *p)
     (void)p;
 //    drawMainForm();
 
-//    setHumiditi(100);
-//    setTerm(-47);
-//    setPa(1250);
-//    setCO2(900);
 
     ESP_LOGI(TAG, "BEGIN display");
 
-    /*st7735_draw_char(80, 100, 'F', ILI9341_COLOR565(0xFF, 0xFF, 0x00),  ILI9341_COLOR565(0x00, 0x00, 0xFF), 2);
-    st7735_draw_string(150, 150, "CFD", ILI9341_COLOR565(0xFF, 0xFF, 0x00),  ILI9341_COLOR565(0x00, 0x00, 0xFF), 2);
-
-    st7735_rect(0, 0, 20, 20, ILI9341_COLOR565(0xFF, 0x00, 0x00));
-    st7735_rect(0, 20, 20, 20, ILI9341_COLOR565(0x00, 0xFF, 0x00));
-    st7735_rect(0, 40, 20, 20, ILI9341_COLOR565(0x00, 0x00, 0xFF));*/
-    
-    /*st7735_rect(0, 60, 20, 20, ILI9341_COLOR565(0x0F, 0x0F, 0x00));
-    st7735_rect(0, 80, 20, 20, ILI9341_COLOR565(0x00, 0x0F, 0x0F));
-    st7735_rect(20, 0, 20, 20, ILI9341_COLOR565(0x0F, 0x00, 0x0F));
-    st7735_rect(40, 0, 20, 20, ILI9341_COLOR565(0x0F, 0x0F, 0x0F));
-    st7735_rect(60, 0, 20, 20, COLOR_YELLOW);
-
-    st7735_rect(80, 0, 20, 20, COLOR_GRAY);*/
-
-//    st7735_draw_char(20, 20, 'V', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(47, 20, 'E', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(74, 20, 'R', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(101, 20, 'A', COLOR_GREEN, COLOR_BLACK, 5);
-
-//    st7735_draw_char(22, 60, 'T', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(57, 60, 'H', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(93, 60, 'E', COLOR_GREEN, COLOR_BLACK, 5);
-
-//    st7735_draw_char(20, 100, 'B', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(47, 100, 'E', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(74, 100, 'S', COLOR_GREEN, COLOR_BLACK, 5);
-//    st7735_draw_char(101, 100, 'T', COLOR_GREEN, COLOR_BLACK, 5);
-
-//    st7735_draw_char(60, 60, 'Z', COLOR_GREEN, COLOR_BLACK, 1);
-
-//    st7735_draw_char(80, 60, 'F', COLOR_GREEN, COLOR_BLACK, 5);
-
-//    st7735_draw_string(80, 150, "PT", COLOR_GREEN, COLOR_BLACK, 5);
-
-//    ST7735_COLOR565(0, 0, 0xFF)
-//    uint16_t c = 0x0001;
-//    uint16_t co2 = 900;
-//    uint16_t hum = 0;
-//    int temp = -50;
-//    int co2 = 0;
-
 //    char buff[100];
 
-    setCO2(0);
+    vTaskDelay(1000/portTICK_RATE_MS);
+
+    drawDip2Form();
+
+//    setCO2(0);
+    vTaskDelay(1000/portTICK_RATE_MS);
 
     while(1)
     {
-//	if(hum == 100)
-//	   hum = 0;
-//	else
-//	   hum += 10;
-	   
-//	if(temp == 50)
-//	   temp = -50;
-//	else
-//	   temp += 10;
-	   
-//	if(co2 == 3000)
-//	   co2 = 0;
-//	else
-//	   co2 += 100;
-	   
-	   
-        vTaskDelay(1000/portTICK_RATE_MS);
+        if(xSemaphoreTake(semaphoreDisplayChange, 5000/portTICK_RATE_MS) == pdTRUE)
+        {
+            if(stateDis == stateMainForm)
+                drawMainForm();
+            else if(stateDis == stateDipForm)
+                drawDipForm();
+            else if(stateDis == stateDip2Form)
+                drawDip2Form();
+        }
+//        vTaskDelay(1000/portTICK_RATE_MS);
         setHumiditi(humidity);
         setTerm(temp);
         setPa(pressure);
         setCO2(co2Val);
 
-        vTaskDelay(5000/portTICK_RATE_MS);
+//        vTaskDelay(5000/portTICK_RATE_MS);
 
-        //TODO add form
-
-//        st7735_rect(50, 79, 20, 20, c);
-//        ESP_LOGI("Display", "Color 0x%04X", c);
-//        c = c << 1;
-//        if(c == 0)
-//            c = 1;
-
-//        co2 += 100;
-//        if(co2 == 2500)
-//            co2 = 900;
-//        setCO2(co2);
     }
 }
 
@@ -326,7 +272,7 @@ void initOutGPIO()
     //set as output mode
     io_conf.mode = GPIO_MODE_OUTPUT;
     //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = ((1ULL << GPIO_LED_GREEN) | (1ULL << GPIO_LED_YELLOW) | \
+    io_conf.pin_bit_mask = ((1ULL << GPIO_LED_GREEN) | (1ULL << GPIO_LED_YELLOW) | (1ULL << GPIO_BUZZ_ON) |\
                             (1ULL << GPIO_LED_ORANGE) | ( 1ULL << GPIO_LED_RED) | (1ULL << GPIO_EN_CO2));
     //disable pull-down mode
     io_conf.pull_down_en = 0;
@@ -334,6 +280,15 @@ void initOutGPIO()
     io_conf.pull_up_en = 0;
     //configure GPIO with the given settings
     gpio_config(&io_conf);
+
+//    mcpwm_gpio_init(MCPWM_UNIT_0, MCPWM0A, GPIO_BUZZ_ON);
+//    mcpwm_config_t pwm_config;
+//    pwm_config.frequency = 1000;    //frequency = 1000Hz
+//    pwm_config.cmpr_a = 0.0;       //duty cycle of PWMxA = 0.0%
+//    pwm_config.cmpr_b = 0.0;       //duty cycle of PWMxb = 0.0%
+//    pwm_config.counter_mode = MCPWM_UP_COUNTER;
+//    pwm_config.duty_mode = MCPWM_DUTY_MODE_0;
+//    mcpwm_init(MCPWM_UNIT_0, MCPWM_TIMER_0, &pwm_config);   //Configure PWM0A & PWM0B with above settings
 }
 
 void taskButton(void *p)
@@ -388,14 +343,15 @@ void taskButton(void *p)
             oldBleft = Bleft;
             ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
-            if(Bleft)
+            if(!Bleft)
             {
-                drawMainForm();
-                setHumiditi(humidity);
-                setTerm(temp);
-                setPa(pressure);
-                setCO2(co2Val);
-//                print_im1();
+                if(stateDis == stateMainForm)
+                    stateDis = stateDipForm;
+                else if(stateDis == stateDipForm)
+                    stateDis = stateDip2Form;
+                else
+                    stateDis = stateMainForm;
+                xSemaphoreGive(semaphoreDisplayChange);
             }
         }
 
@@ -404,14 +360,15 @@ void taskButton(void *p)
             oldBright = Bright;
             ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
-            if(Bright)
+            if(!Bright)
             {
-                drawDipForm();
-                setHumiditi(humidity);
-                setTerm(temp);
-                setPa(pressure);
-                setCO2(co2Val);
-//                print_im2();
+                if(stateDis == stateMainForm)
+                    stateDis = stateDip2Form;
+                else if(stateDis == stateDip2Form)
+                    stateDis = stateDipForm;
+                else
+                    stateDis = stateMainForm;
+                xSemaphoreGive(semaphoreDisplayChange);
             }
         }
 
@@ -420,6 +377,8 @@ void taskButton(void *p)
             oldBmenu = Bmenu;
             ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
+            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
+//            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bmenu ? 10.0 : 0.0);
         }
 
         if(oldBback != Bback)
@@ -427,15 +386,16 @@ void taskButton(void *p)
             oldBback = Bback;
             ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
+            gpio_set_level(GPIO_BUZZ_ON, Bback ? 1 : 0);
+//            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bback ? 10.0 : 0.0);
 
-            if(Bback)
+            if(!Bback)
             {
-                drawDip2Form();
+                ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+                ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+                ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
             }
 
-            ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
-            ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
-            ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
         }
     }
 }
@@ -712,6 +672,7 @@ void app_main(void)
 
 
     s_wifi_event_group = xEventGroupCreate();
+    semaphoreDisplayChange = xSemaphoreCreateBinary();
     initDisplay();
 
 
@@ -728,7 +689,7 @@ void app_main(void)
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-//    xTaskCreate(nRF24_task, "nrf", 2048, NULL, 2, NULL);
+    xTaskCreate(nRF24_task, "nrf", 2048, NULL, 1, NULL);
     xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
 
 

@@ -72,6 +72,8 @@ wifi_manager/doc/
 # Visual Studio Code
 .vscode/
 
+#Qt
+*.user
 
 build
 sdkconfig.old

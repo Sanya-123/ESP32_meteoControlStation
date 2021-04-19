@@ -22,6 +22,7 @@
 #define GPIO_LED_YELLOW     33
 #define GPIO_LED_ORANGE     25
 #define GPIO_LED_RED        26
+#define GPIO_BUZZ_ON        27
 
 #define GPIO_EN_CO2         12
 
