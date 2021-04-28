@@ -81,6 +81,16 @@
 #define TEMP_NOW_Y      180
 #define MOON_X          20
 #define MOON_Y          120
+#define TEMP_FEEL_X      300
+#define TEMP_FEEL_Y      100
+#define WHEATHER_HUM_X      300
+#define WHEATHER_HUM_Y      70
+#define WHEATHER_PRES_X      300
+#define WHEATHER_PRES_Y      10
+#define WHEATHER_VIS_X      300
+#define WHEATHER_VIS_Y      40
+#define WHEATHER_DISCRIPT_X      180
+#define WHEATHER_DISCRIPT_Y      110
 
 #define WHEATHER_IMG_FORC1_X 245
 #define WHEATHER_IMG_FORC1_Y 50
@@ -653,11 +663,27 @@ void setWheather(OpenWeather *wheather)
 
     memset(buffer, 0, 60);
     sprintf(buffer, "%d C", (int)(wheather->temp));
-    tft_draw_string(TEMP_NOW_X, TEMP_NOW_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 4);
+    tft_draw_string(TEMP_NOW_X, TEMP_NOW_Y, buffer, ILI9341_COLOR565(0xFF, 0xFF, 0x00), 0x0000, 4);
 
     memset(buffer, 0, 60);
     sprintf(buffer, "Feel %d C", (int)(wheather->feels_like));
-    tft_draw_string(300, 100, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+    tft_draw_string(TEMP_FEEL_X, TEMP_FEEL_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "Hum. %d", (int)(wheather->humidity));
+    tft_draw_string(WHEATHER_HUM_X, WHEATHER_HUM_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "Pres. %d mPa/%d mmHg", (int)(wheather->pressure), (int)(wheather->pressure*0.7500617));
+    tft_draw_string(WHEATHER_PRES_X, WHEATHER_PRES_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "Vis. %d m", (int)(wheather->visibility));
+    tft_draw_string(WHEATHER_VIS_X, WHEATHER_VIS_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "%s", wheather->weatherName);
+    tft_draw_string(WHEATHER_DISCRIPT_X, WHEATHER_DISCRIPT_Y, buffer, ILI9341_COLOR565(0xFF, 0xFF, 0x00), 0x0000, 3);
 }
 
 void prontTestIm(Image path0, Image path1, Image path2, Image path3, int W, int H0, int H1)

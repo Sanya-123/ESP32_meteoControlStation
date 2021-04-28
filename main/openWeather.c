@@ -180,8 +180,7 @@ int download_callback(request_t *req, char *data, int len)
 //    buff[sizeBuff] = '\0';
     return 0;
 }
-//https://api.openweathermap.org/data/2.5/onecall?lat=58.5&lon=82.5&units=M&lang=EN&exclude=minutely&appid=b5699c83d361c7f2d4b0d192a2534554
-//http://api.openweathermap.org/data/2.5/weather?q=Tomsk,RU&mode=json&units=M&lang=EN&cnt=%d&APPID=b5699c83d361c7f2d4b0d192a2534554
+
 void initOpenWeather()
 {
     xSemaphoreDataIsGet = xSemaphoreCreateBinary();

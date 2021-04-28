@@ -65,7 +65,7 @@ const char *TAG = "meteoCS";
 
 OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEATHER_HOUR_READ];
 static SemaphoreHandle_t semaphoreDisplayChange;
-static enum stateDisplay stateDis = stateWeatherTeat;
+static enum stateDisplay stateDis = stateWeather;
 static SemaphoreHandle_t semaphoreDisplayNextState;
 uint32_t periodChange = 30000;//NOTE configuraleble state or config individual stete for ever display
 double temp = 0.0, pressure = 0.0, humidity = 0.0;
@@ -105,9 +105,9 @@ void taskNextState(void *p)
         else if(stateDis == stateDipForm)
             stateDis = stateDip2Form;
         else if(stateDis == stateDip2Form)
-            stateDis = stateWeatherTeat;
-        else if(stateDis == stateWeatherTeat)
             stateDis = stateWeather;
+//        else if(stateDis == stateWeather)
+//            stateDis = stateWeatherTeat;
 
 //        else if(stateDis == stateWeather)
 //            stateDis = stateTest1;
@@ -206,7 +206,7 @@ void taskDisplay(void *p)
 
     vTaskDelay(100/portTICK_RATE_MS);
 
-    drawWheatherTest();
+    drawWheather();
 
 //    setCO2(0);
     vTaskDelay(1000/portTICK_RATE_MS);
