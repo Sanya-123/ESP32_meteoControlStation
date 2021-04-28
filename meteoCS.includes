@@ -2,6 +2,7 @@ main
 main/cJSON
 main/esp_request/include
 component/wifi_manager/src
+component/esp_nrf24/include
 
 IDF_PATH=/home/user/.esp/esp-idf
 

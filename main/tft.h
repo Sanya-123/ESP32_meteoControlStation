@@ -89,7 +89,7 @@ void tft_invert_color(int i);
 void tft_fill_screen(uint16_t color);
 uint32_t tft_draw_string(uint16_t x, uint16_t y, const char *pt, int16_t color, int16_t bg_color, uint8_t size);
 void tft_draw_char(uint16_t x, uint16_t y, char c, uint16_t color, uint16_t bg_color, uint8_t size);
-void send_picturte(int xpos, int ypos, int W, int H, uint16_t **picture);
-void read_picturte(int xpos, int ypos, int W, int H, uint16_t **picture);
+void tft_send_picturte(int xpos, int ypos, int W, int H, uint16_t **picture);
+//void tft_read_picturte(int xpos, int ypos, int W, int H, uint16_t **picture);
 
 //void ST7735_WriteString(uint16_t x, uint16_t y, const char* str, FontDef font, uint16_t color, uint16_t bgcolor);

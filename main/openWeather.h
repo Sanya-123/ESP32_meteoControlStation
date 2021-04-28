@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <stdbool.h>
+#include "decode_image.h"
 
 //typedef struct { // For current Day and Day 1, 2, 3, etc
 //  String   Dt;
@@ -40,6 +42,8 @@ typedef struct
 {
     //weather
     char weatherIcon[10];
+    int code;
+    char weatherName[40];
     //main
     float temp;//note from kelvine to C
     float feels_like;
@@ -47,8 +51,8 @@ typedef struct
     float temp_max;//note from kelvine to C
     float pressure;
     float humidity;
-    float sea_level;
-    float grnd_level;
+//    float sea_level;
+//    float grnd_level;
     //visibility
     int visibility;
     //wind
@@ -59,8 +63,14 @@ typedef struct
     //sys
     int sunrise;
     int sunset;
+    float phaseMoon;
 }OpenWeather;
 
 void initOpenWeather();
 int askWeather(OpenWeather *veather);
+//int askWeatherDayly(OpenWeather *veather);
+int askWeatherOneCall(OpenWeather *current, OpenWeather *dayly, int days, OpenWeather *hourly, int houres);
 void printOpenWeather(OpenWeather weather);
+Image getImageWheather(OpenWeather weather, bool big);
+Image getWind(int deg);
+

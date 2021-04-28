@@ -27,6 +27,7 @@
 #include "gpioDEF.h"
 
 #include "net.h"
+#include "bme_i2c.h"
 #include "bme280_ok.h"
 #include "display.h"
 #include "mh-z19.h"
@@ -38,12 +39,16 @@
 //#include "lwip/netdb.h"
 //#include "lwip/dns.h"
 //#include "esp32-rf24.h"
-#include "RF24.h"
+//#include "RF24.h"
+#include "esp_nrf24.h"
+#include "esp_nrf24_map.h"
 //#include "nrf24l01.h"
 #include "openWeather.h"
 
 #include "mqtt_client.h"
 
+#define WHEATHER_DAYS_READ      5
+#define WHEATHER_HOUR_READ      24
 
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_3) | (1ULL << GPIO_INPUT_IO_4))
@@ -58,92 +63,14 @@
 
 const char *TAG = "meteoCS";
 
-OpenWeather weather;
+OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEATHER_HOUR_READ];
 static SemaphoreHandle_t semaphoreDisplayChange;
-static enum stateDisplay stateDis = stateDip2Form;
-
-
-#define I2C_MASTER_ACK 0
-#define I2C_MASTER_NACK 1
-
-void i2c_master_init()
-{
-    i2c_config_t i2c_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = 21,
-        .scl_io_num = 22,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 1000000
-    };
-    i2c_param_config(I2C_NUM_0, &i2c_config);
-    i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0);
-}
-
-s8 BME280_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
-{
-    s32 iError = BME280_INIT_VALUE;
-
-    esp_err_t espRc;
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev_addr << 1) | I2C_MASTER_WRITE, true);
-
-    i2c_master_write_byte(cmd, reg_addr, true);
-    i2c_master_write(cmd, reg_data, cnt, true);
-    i2c_master_stop(cmd);
-
-    espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
-    if (espRc == ESP_OK) {
-        iError = SUCCESS;
-    } else {
-        iError = FAIL;
-    }
-    i2c_cmd_link_delete(cmd);
-
-    return (s8)iError;
-}
-
-s8 BME280_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
-{
-    s32 iError = BME280_INIT_VALUE;
-    esp_err_t espRc;
-
-    i2c_cmd_handle_t cmd = i2c_cmd_link_create();
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev_addr << 1) | I2C_MASTER_WRITE, true);
-    i2c_master_write_byte(cmd, reg_addr, true);
-
-    i2c_master_start(cmd);
-    i2c_master_write_byte(cmd, (dev_addr << 1) | I2C_MASTER_READ, true);
-
-    if (cnt > 1) {
-        i2c_master_read(cmd, reg_data, cnt-1, I2C_MASTER_ACK);
-    }
-    i2c_master_read_byte(cmd, reg_data+cnt-1, I2C_MASTER_NACK);
-    i2c_master_stop(cmd);
-
-    espRc = i2c_master_cmd_begin(I2C_NUM_0, cmd, 10/portTICK_PERIOD_MS);
-    if (espRc == ESP_OK) {
-        iError = SUCCESS;
-    } else {
-        iError = FAIL;
-    }
-
-    i2c_cmd_link_delete(cmd);
-
-    return (s8)iError;
-}
-
-void BME280_delay_msek(u32 msek)
-{
-    vTaskDelay(msek/*/portTICK_PERIOD_MS*/);
-}
-
+static enum stateDisplay stateDis = stateWeatherTeat;
+static SemaphoreHandle_t semaphoreDisplayNextState;
+uint32_t periodChange = 30000;//NOTE configuraleble state or config individual stete for ever display
 double temp = 0.0, pressure = 0.0, humidity = 0.0;
 uint16_t co2Val;
+
 
 int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
 {
@@ -161,6 +88,50 @@ int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
     }
 
     return ret;
+}
+
+void taskNextState(void *p)
+{
+//    uint32_t periodChange = *((uint32_t*)p);
+    vTaskDelay(1000);
+
+    while(1)
+    {
+        //wayt periodChange and chnage state or cahnge state by semaphore
+        xSemaphoreTake(semaphoreDisplayNextState, periodChange/portTICK_RATE_MS);
+
+        if(stateDis == stateMainForm)
+            stateDis = stateDipForm;
+        else if(stateDis == stateDipForm)
+            stateDis = stateDip2Form;
+        else if(stateDis == stateDip2Form)
+            stateDis = stateWeatherTeat;
+        else if(stateDis == stateWeatherTeat)
+            stateDis = stateWeather;
+
+//        else if(stateDis == stateWeather)
+//            stateDis = stateTest1;
+//        else if(stateDis == stateTest1)
+//            stateDis = stateTest2;
+//        else if(stateDis == stateTest2)
+//            stateDis = stateTest3;
+//        else if(stateDis == stateTest3)
+//            stateDis = stateTest4;
+//        else if(stateDis == stateTest4)
+//            stateDis = stateTestTiger;
+//        else if(stateDis == stateTestTiger)
+//            stateDis = stateTestNu0;
+//        else if(stateDis == stateTestNu0)
+//            stateDis = stateTestNu1;
+//        else if(stateDis == stateTestNu1)
+//            stateDis = stateTestNu2;
+//        else if(stateDis == stateTestNu2)
+//            stateDis = stateTestNu3;
+
+        else
+            stateDis = stateMainForm;
+        xSemaphoreGive(semaphoreDisplayChange);
+    }
 }
 
 void taskBME(void *p)
@@ -223,8 +194,6 @@ void taskBME(void *p)
     vTaskDelete(NULL);
 }
 
-#include "tft.h"
-
 void taskDisplay(void *p)
 {
     (void)p;
@@ -235,16 +204,17 @@ void taskDisplay(void *p)
 
 //    char buff[100];
 
-    vTaskDelay(1000/portTICK_RATE_MS);
+    vTaskDelay(100/portTICK_RATE_MS);
 
-    drawDip2Form();
+    drawWheatherTest();
 
 //    setCO2(0);
     vTaskDelay(1000/portTICK_RATE_MS);
 
     while(1)
     {
-        if(xSemaphoreTake(semaphoreDisplayChange, 5000/portTICK_RATE_MS) == pdTRUE)
+        //wayt 3 seconds + while chnage states
+        if(xSemaphoreTake(semaphoreDisplayChange, 3000/portTICK_RATE_MS) == pdTRUE)
         {
             if(stateDis == stateMainForm)
                 drawMainForm();
@@ -252,12 +222,37 @@ void taskDisplay(void *p)
                 drawDipForm();
             else if(stateDis == stateDip2Form)
                 drawDip2Form();
+            else if(stateDis == stateWeatherTeat)
+                drawWheatherTest();
+            else if(stateDis == stateWeather)
+                drawWheather();
+
+            else if(stateDis == stateTest1)
+                print_imTest1();
+            else if(stateDis == stateTest2)
+                print_imTest2();
+            else if(stateDis == stateTest3)
+                print_imTest3();
+            else if(stateDis == stateTest4)
+                print_imTest4();
+            else if(stateDis == stateTestTiger)
+                print_imTestTiger();
+            else if(stateDis == stateTestNu0)
+                print_imTestNy0();
+            else if(stateDis == stateTestNu1)
+                print_imTestNy1();
+            else if(stateDis == stateTestNu2)
+                print_imTestNy2();
+            else if(stateDis == stateTestNu3)
+                print_imTestNy3();
         }
 //        vTaskDelay(1000/portTICK_RATE_MS);
         setHumiditi(humidity);
         setTerm(temp);
         setPa(pressure);
         setCO2(co2Val);
+        testMoon();
+        setWheather(&weatherCurent);
 
 //        vTaskDelay(5000/portTICK_RATE_MS);
 
@@ -345,13 +340,7 @@ void taskButton(void *p)
             gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
             if(!Bleft)
             {
-                if(stateDis == stateMainForm)
-                    stateDis = stateDipForm;
-                else if(stateDis == stateDipForm)
-                    stateDis = stateDip2Form;
-                else
-                    stateDis = stateMainForm;
-                xSemaphoreGive(semaphoreDisplayChange);
+                xSemaphoreGive(semaphoreDisplayNextState);
             }
         }
 
@@ -362,13 +351,13 @@ void taskButton(void *p)
             gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
             if(!Bright)
             {
-                if(stateDis == stateMainForm)
-                    stateDis = stateDip2Form;
-                else if(stateDis == stateDip2Form)
-                    stateDis = stateDipForm;
-                else
-                    stateDis = stateMainForm;
-                xSemaphoreGive(semaphoreDisplayChange);
+//                if(stateDis == stateMainForm)
+//                    stateDis = stateDip2Form;
+//                else if(stateDis == stateDip2Form)
+//                    stateDis = stateDipForm;
+//                else
+//                    stateDis = stateMainForm;
+//                xSemaphoreGive(semaphoreDisplayChange);
             }
         }
 
@@ -377,7 +366,7 @@ void taskButton(void *p)
             oldBmenu = Bmenu;
             ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
-            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
+//            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bmenu ? 10.0 : 0.0);
         }
 
@@ -386,7 +375,7 @@ void taskButton(void *p)
             oldBback = Bback;
             ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
-            gpio_set_level(GPIO_BUZZ_ON, Bback ? 1 : 0);
+//            gpio_set_level(GPIO_BUZZ_ON, Bback ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bback ? 10.0 : 0.0);
 
             if(!Bback)
@@ -440,38 +429,54 @@ void nRF24_task(void *pvParameters)
 {
     vTaskDelay(1000/portTICK_RATE_MS);
     (void)pvParameters;
-    rf24_bus_cfg_t rf24_bus_cfg = {
-        .spi_host = VSPI_HOST,
-        .init_host = false,
-        .mosi_io_num = GPIO_SPI_MOSI,
-        .miso_io_num = GPIO_SPI_MISO,
-        .sclk_io_num = GPIO_SPI_CLK,
-        .cs_io_num = GPIO_NRF_CS,
-        .ce_io_num = GPIO_NRF_CE
-    };
-    NRF_Init(rf24_bus_cfg);
+
+
+//    rf24_bus_cfg_t rf24_bus_cfg = {
+//        .spi_host = VSPI_HOST,
+//        .init_host = false,
+//        .mosi_io_num = GPIO_SPI_MOSI,
+//        .miso_io_num = GPIO_SPI_MISO,
+//        .sclk_io_num = GPIO_SPI_CLK,
+//        .cs_io_num = GPIO_NRF_CS,
+//        .ce_io_num = GPIO_NRF_CE
+//    };
+    nrf24_t dev;
+    nrf24_init(&dev, VSPI_HOST, GPIO_SPI_MOSI, GPIO_SPI_MISO, GPIO_SPI_CLK, GPIO_NRF_CE, GPIO_NRF_CS);
+//    NRF_Init(rf24_bus_cfg);
     const uint64_t pipe1 = 0xE8E8F0F0E2LL;  //идентификатор трубы с номером 1
     ////////////// SET ////////////////
-    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
-    setAutoAck(false); //отключаем автоответе
-    disableDynamicPayloads(); //отключаем динамический размер нагрузки
-    //disableCRC();
-    setPayloadSize(8); //размер нагрузки 8 байт
-    setChannel(100); //канал 19
-//    openWritingPipe(pipe1); //открываем трубу с номером 1
-    openReadingPipe(1, pipe1); //открываем трубу с номером 1
-    startListening();
-    ///////////////////////////////////
+//    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
+    uint8_t tmp = 0;
+    nrf24_set_register(&dev, NRF24_REG_EN_AA, &tmp, 1);
+//    setAutoAck(false); //отключаем автоответе
+    nrf24_set_register(&dev, NRF24_REG_FEATURE, &tmp, 1);
+    nrf24_set_register(&dev, NRF24_REG_DYNPD, &tmp, 1);
+//    disableDynamicPayloads(); //отключаем динамический размер нагрузки
+//    //disableCRC();
+    nrf24_set_payload_length(&dev, 8);
+//    setPayloadSize(8); //размер нагрузки 8 байт
+    nrf24_set_rf_channel(&dev, 100);
+//    setChannel(100); //канал 19
+////    openWritingPipe(pipe1); //открываем трубу с номером 1
+    nrf24_set_rx_address(&dev, NRF24_P1, &pipe1, 8);
+    nrf24_enable_rx_pipe(&dev, NRF24_P1);
+//    openReadingPipe(1, pipe1); //открываем трубу с номером 1
+
+//    startListening();
+//    ///////////////////////////////////
 
     uint8_t buff[8] = {0};
-    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
-    int status;
-//    int i = 0;
+//    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
+//    int status;
+////    int i = 0;
+
+//    while(1) {vTaskDelay(1000/portTICK_RATE_MS);}
 
     while(1)
     {
-        vTaskDelay(10/portTICK_RATE_MS);
-        if(!availableMy())
+        vTaskDelay(1000/portTICK_RATE_MS);
+//        if(!availableMy())
+        if(nrf24_get_data_available(&dev))
         {
 //            i++;
 //            if(i == 100)
@@ -484,9 +489,10 @@ void nRF24_task(void *pvParameters)
         }
         else
         {
-            status = read_payload(buff, 8);
+            nrf24_get_data(&dev, buff, 8);
+//            status = read_payload(buff, 8);
     //        write_register(NRF_STATUS, (1 << RX_DR) | (1 << MAX_RT) | (1 << TX_DS));
-            ESP_LOGI("nrf", "status = %d", status);
+//            ESP_LOGI("nrf", "status = %d", status);
             for(int i = 0; i < 8; i++)
             {
                 ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
@@ -531,11 +537,23 @@ void openWeatherTask(void *p)
     {
 
         ESP_LOGI("weather", "begin read weather");
-        if(askWeather(&weather) == 0)
+//        if(askWeatherOneCall(&weatherCurent, weatherDayli, WHEATHER_DAYS_READ, weatherHourly, WHEATHER_HOUR_READ) == 0)
+        if(askWeather(&weatherCurent) == 0)
         {
-            printOpenWeather(weather);
+            printOpenWeather(weatherCurent);
+//            ESP_LOGI("weather", "day 0");
+//            printOpenWeather(weatherDayli[0]);
+
+//            ESP_LOGI("weather", "day 2");
+//            printOpenWeather(weatherDayli[2]);
+
+//            ESP_LOGI("weather", "hour 2");
+//            printOpenWeather(weatherHourly[2]);
+
+//            ESP_LOGI("weather", "day 7");
+//            printOpenWeather(weatherHourly[7]);
         }
-        vTaskDelay(60000/portTICK_RATE_MS);
+        vTaskDelay(60000/portTICK_RATE_MS);//1min
     }
 }
 
@@ -610,7 +628,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
 void task_MQTT(void *p)
 {
-    xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY);
+    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
 
     vTaskDelay(10000/portTICK_RATE_MS);
     ESP_LOGI("MQTT", "begin MQTT");
@@ -652,17 +670,18 @@ void task_MQTT(void *p)
     }
 }
 
-static uint16_t pixelRead[10][10];
-
 void app_main(void)
 {
     esp_log_level_set("MQTT", ESP_LOG_NONE);
     esp_log_level_set("wifi_manager", ESP_LOG_NONE);
-    esp_log_level_set("weathe:", ESP_LOG_NONE);
+//    esp_log_level_set("weathe:", ESP_LOG_NONE);
+//    esp_log_level_set("HTTP", ESP_LOG_NONE);
+//    esp_log_level_set("HTTP_REQ", ESP_LOG_NONE);
     esp_log_level_set("TRANS_TCP", ESP_LOG_NONE);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_NONE);
 
     initOutGPIO();
+
 
 //    esp_log_level_set("CO2", ESP_LOG_VERBOSE);
 //    esp_log_level_set("CO2", ESP_LOG_DEBUG);
@@ -673,9 +692,20 @@ void app_main(void)
 
     s_wifi_event_group = xEventGroupCreate();
     semaphoreDisplayChange = xSemaphoreCreateBinary();
+    semaphoreDisplayNextState = xSemaphoreCreateBinary();
     initDisplay();
 
+//    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+//    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+//    ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
+//    print_imTest1();
+//    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+//    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+//    ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
+//    vTaskDelay(1000/portTICK_RATE_MS);
 
+
+//    static uint16_t pixelRead[10][10];
 //    ESP_LOGI(TAG, "Read display");
 
 //    read_picturte(30, 80, 10, 10, pixelRead);
@@ -684,13 +714,14 @@ void app_main(void)
 //    send_picturte(150, 100, 10, 10, pixelRead);
 //    ESP_LOGI(TAG, "Write display OK");
 
-//    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
+    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 3, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-    xTaskCreate(nRF24_task, "nrf", 2048, NULL, 1, NULL);
+//    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
     xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
+    xTaskCreate(taskNextState, "ChangeD", 512, NULL, 2, NULL);
 
 
 

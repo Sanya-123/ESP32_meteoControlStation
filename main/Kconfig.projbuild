@@ -24,8 +24,14 @@ menu "control stationconfig"
 
     config MQTT_SERVER
         string "MQTT server"
-        default "192.168.0.16:1883"
+        default "mqtt://192.168.0.100:1883"
         help
             MQTT server addres
+
+    config OPEN_WEATHER_API_KEY
+        string "KEY FOR OpenWheather"
+        default ""
+        help
+            Enter key for Open wheather; get from https://openweathermap.org/price
 
 endmenu

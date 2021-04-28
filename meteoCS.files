@@ -8,6 +8,8 @@ main/bme280.h
 main/bme280_defs.h
 main/bme280_ok.c
 main/bme280_ok.h
+main/bme_i2c.c
+main/bme_i2c.h
 main/cJSON/cJSON.c
 main/cJSON/cJSON.h
 main/cJSON/cJSON_Utils.c
@@ -54,3 +56,6 @@ component/wifi_manager/src/nvs_sync.c
 component/wifi_manager/src/nvs_sync.h
 component/wifi_manager/src/wifi_manager.c
 component/wifi_manager/src/wifi_manager.h
+component/esp_nrf24/include/esp_nrf24.h
+component/esp_nrf24/include/esp_nrf24_map.h
+component/esp_nrf24/esp_nrf24.c

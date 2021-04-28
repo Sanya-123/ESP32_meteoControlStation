@@ -526,7 +526,7 @@ void send_picturte_line(int xpos, int ypos, int W, int H, uint16_t *linedata)
     assert(ret==ESP_OK);
 }
 
-void send_picturte(int xpos, int ypos, int W, int H, uint16_t **picture)
+void tft_send_picturte(int xpos, int ypos, int W, int H, uint16_t **picture)
 {
     for(int i = 0; i < H; i++)
     {
@@ -590,7 +590,7 @@ void read_picturte_line(int xpos, int ypos, int W, int H, uint16_t *linedata)
     //send_line_finish(spi_dev);
 }
 
-void read_picturte(int xpos, int ypos, int W, int H, uint16_t **picture)
+void tft_read_picturte(int xpos, int ypos, int W, int H, uint16_t **picture)
 {
     for(int i = 0; i < H; i++)
     {
@@ -740,3 +740,43 @@ uint32_t tft_draw_string(uint16_t x, uint16_t y, const char *pt, int16_t color, 
     }
     return count;  // number of characters printed
 }
+
+//int disp_spi_read_data(spi_device_handle_t handle, int x1, int y1, int x2, int y2, int len, uint8_t *buf)
+//{
+//	memset(buf, 0, len*2);
+
+//	uint8_t *rbuf = malloc((len*3)+1);
+//    if (!rbuf) return -1;
+
+//    memset(rbuf, 0, (len*3)+1);
+
+//    // ** Send address window **
+//	disp_spi_transfer_addrwin(handle, x1, x2, y1, y2);
+
+//    // ** GET pixels/colors **
+//	disp_spi_transfer_cmd(handle, TFT_RAMRD);
+
+//	// Receive data
+//    esp_err_t ret;
+//    spi_transaction_t t;
+//    memset(&t, 0, sizeof(t));  //Zero out the transaction
+//    t.length=0;                //Send notning
+//    t.tx_buffer=NULL;
+//    t.rxlength=8*((len*3)+1);  //Receive size in bits
+//    t.rx_buffer=rbuf;
+//    t.user=(void*)1;           //D/C needs to be set to 1
+//    ret = spi_transfer_data(handle, &t); // Transmit using direct mode
+
+//	if (ret == ESP_OK) {
+//		int idx = 0;
+//		uint16_t color;
+//		for (int i=1; i<(len*3); i+=3) {
+//			color = (uint16_t)((uint16_t)((rbuf[i] & 0xF8) << 8) | (uint16_t)((rbuf[i+1] & 0xFC) << 3) | (uint16_t)(rbuf[i+2] >> 3));
+//			buf[idx++] = color >> 8;
+//			buf[idx++] = color & 0xFF;
+//		}
+//	}
+//    free(rbuf);
+
+//    return ret;
+//}
