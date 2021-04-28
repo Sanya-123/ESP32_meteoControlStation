@@ -70,6 +70,36 @@
 #define DIP_X_CO2_VAL       300
 #define DIP_Y_CO2_VAL       100
 
+//open wheather
+#define WHEATHER_IMG_NOW_X  140
+#define WHEATHER_IMG_NOW_Y  140
+#define WIND_IMG_NOW_X  245
+#define WIND_IMG_NOW_Y  160
+#define WIND_SPEED_NOW_X 300
+#define WIND_SPEED_NOW_Y 130
+#define TEMP_NOW_X      130
+#define TEMP_NOW_Y      180
+#define MOON_X          20
+#define MOON_Y          120
+
+#define WHEATHER_IMG_FORC1_X 245
+#define WHEATHER_IMG_FORC1_Y 50
+#define WHEATHER_TEMP_FORC1_X 290
+#define WHEATHER_TEMP_FORC1_Y 30
+#define WHEATHER_IMG_FORC2_X 175
+#define WHEATHER_IMG_FORC2_Y 50
+#define WHEATHER_TEMP_FORC2_X 220
+#define WHEATHER_TEMP_FORC2_Y 30
+#define WHEATHER_IMG_FORC3_X 105
+#define WHEATHER_IMG_FORC3_Y 50
+#define WHEATHER_TEMP_FORC3_X 150
+#define WHEATHER_TEMP_FORC3_Y 30
+#define WHEATHER_IMG_FORC4_X 35
+#define WHEATHER_IMG_FORC4_Y 50
+#define WHEATHER_TEMP_FORC4_X 80
+#define WHEATHER_TEMP_FORC4_Y 30
+
+
 enum stateDisplay stateD = none;
 uint16_t **pixels_hum0;
 uint16_t **pixels_hum1;
@@ -115,7 +145,7 @@ void initDisplay()
 //       ESP_LOGI("Display", "Can't ionit picture Im2");
 //    }
 
-    drawMainForm();
+//    drawMainForm();
 
 //    if(decode_image(&pixels_im2, Im2))
 //    {
@@ -145,9 +175,9 @@ void drawMainForm()
 
     tft_fill_screen(DEFOULE_COLOR);
 
-    send_picturte(X_HUMIDITI, Y_HUMIDITI, HUMIDITY_W, HUMIDITY_H, pixels_hum1);
-    send_picturte(X_TERM, Y_TERM, TEMPERATURE_W, TEMPERATURE_H, pixels_temp1);
-    send_picturte(X_CO2, Y_CO2, CO2_W, CO2_H, pixels_co2);
+    tft_send_picturte(X_HUMIDITI, Y_HUMIDITI, HUMIDITY_W, HUMIDITY_H, pixels_hum1);
+    tft_send_picturte(X_TERM, Y_TERM, TEMPERATURE_W, TEMPERATURE_H, pixels_temp1);
+    tft_send_picturte(X_CO2, Y_CO2, CO2_W, CO2_H, pixels_co2);
 //    tft_fill_screen(DEFOULE_COLOR);
 //    //humiditi
 //    drawunfillRectangle(X_HUMIDITI - SLIM, Y_HUMIDITI - SLIM, WIDTH_RECT, HEIGHT_RECT, SLIM, COLOR_WHITE, DEFOULE_COLOR);//правая колонка
@@ -209,6 +239,186 @@ void drawDip2Form()
     tft_draw_string(DIP_X_WORLD_CO2, DIP_Y_WORLD_CO2, "CO2", 0x0000, COLOR_GREEN, 4);
 }
 
+void drawWheatherTest()
+{
+    tft_fill_screen(0x0000);
+
+    stateD = stateWeatherTeat;
+    uint16_t **pixels_image;
+    if(decode_image(&pixels_image, B_Wclear_day))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(WHEATHER_IMG_NOW_X, WHEATHER_IMG_NOW_Y, WEATHERB_W, WEATHERB_H, pixels_image);
+        free_image(&pixels_image, B_Wclear_day);
+    }
+
+    if(decode_image(&pixels_image, WindNE))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(WIND_IMG_NOW_X, WIND_IMG_NOW_Y, WIND_W, WIND_H, pixels_image);
+        free_image(&pixels_image, WindNE);
+    }
+
+     tft_draw_string(WIND_SPEED_NOW_X, WIND_SPEED_NOW_Y, "2.1 m/s", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+     tft_draw_string(TEMP_NOW_X, TEMP_NOW_Y, "+27 C", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 4);
+
+     testMoon();
+
+
+     if(decode_image(&pixels_image, Wclear_night))
+     {
+        ESP_LOGI("Display", "Can't ionit picture");
+     }
+     else
+     {
+         tft_send_picturte(WHEATHER_IMG_FORC1_X, WHEATHER_IMG_FORC1_Y, WEATHER_W, WEATHER_H, pixels_image);
+         free_image(&pixels_image, Wclear_night);
+     }
+
+     tft_draw_string(WHEATHER_TEMP_FORC1_X, WHEATHER_TEMP_FORC1_Y, "+27 C", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+     if(decode_image(&pixels_image, Wcloudy))
+     {
+        ESP_LOGI("Display", "Can't ionit picture");
+     }
+     else
+     {
+         tft_send_picturte(WHEATHER_IMG_FORC2_X, WHEATHER_IMG_FORC2_Y, WEATHER_W, WEATHER_H, pixels_image);
+         free_image(&pixels_image, Wcloudy);
+     }
+
+     tft_draw_string(WHEATHER_TEMP_FORC2_X, WHEATHER_TEMP_FORC2_Y, "+10 C", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+     if(decode_image(&pixels_image, WlightRain))
+     {
+        ESP_LOGI("Display", "Can't ionit picture");
+     }
+     else
+     {
+         tft_send_picturte(WHEATHER_IMG_FORC3_X, WHEATHER_IMG_FORC3_Y, WEATHER_W, WEATHER_H, pixels_image);
+         free_image(&pixels_image, WlightRain);
+     }
+
+     tft_draw_string(WHEATHER_TEMP_FORC3_X, WHEATHER_TEMP_FORC3_Y, "+8 C", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+     if(decode_image(&pixels_image, Wthunderstorm))
+     {
+        ESP_LOGI("Display", "Can't ionit picture");
+     }
+     else
+     {
+         tft_send_picturte(WHEATHER_IMG_FORC4_X, WHEATHER_IMG_FORC4_Y, WEATHER_W, WEATHER_H, pixels_image);
+         free_image(&pixels_image, Wthunderstorm);
+     }
+
+     tft_draw_string(WHEATHER_TEMP_FORC4_X, WHEATHER_TEMP_FORC4_Y, "+16 C", ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+}
+
+void drawWheather()
+{
+    tft_fill_screen(0x0000);
+
+    stateD = stateWeather;
+}
+
+void testMoon()
+{
+    if(stateD != stateWeatherTeat)
+        return;
+
+    uint16_t **pixels_image;
+
+    Image testMoon[] = {    Moon_L0,
+                            Moon_L1,
+                            Moon_L2,
+                            Moon_L3,
+                            Moon_L4,
+                            Moon_L5,
+                            Moon_L6,
+                            Moon_L7,
+                            Moon_L8,
+                            Moon_L9,
+                            Moon_L10,
+                            Moon_L11,
+                            Moon_L12,
+                            Moon_L13,
+                            Moon_L14,
+                            Moon_L15,
+                            Moon_L16,
+                            Moon_L17,
+                            Moon_L18,
+                            Moon_L19,
+                            Moon_L20,
+                            Moon_L21,
+                            Moon_L22,
+                            Moon_L23,};
+
+    for(int i = 0; i < (sizeof (testMoon)/sizeof (testMoon[0])); i++)
+    {
+        if(decode_image(&pixels_image, testMoon[i]))
+        {
+           ESP_LOGI("Display", "Can't ionit picture");
+        }
+        else
+        {
+            tft_send_picturte(MOON_X, MOON_Y, MOON_W, MOON_H, pixels_image);
+            free_image(&pixels_image, testMoon[i]);
+        }
+        vTaskDelay(1);
+    }
+}
+
+void drawMoon(int phase)
+{
+    if(stateD != stateWeatherTeat)
+        return;
+
+    uint16_t **pixels_image;
+
+    Image masMoon[] = {    Moon_L0,
+                            Moon_L1,
+                            Moon_L2,
+                            Moon_L3,
+                            Moon_L4,
+                            Moon_L5,
+                            Moon_L6,
+                            Moon_L7,
+                            Moon_L8,
+                            Moon_L9,
+                            Moon_L10,
+                            Moon_L11,
+                            Moon_L12,
+                            Moon_L13,
+                            Moon_L14,
+                            Moon_L15,
+                            Moon_L16,
+                            Moon_L17,
+                            Moon_L18,
+                            Moon_L19,
+                            Moon_L20,
+                            Moon_L21,
+                            Moon_L22,
+                            Moon_L23,};
+
+        if(decode_image(&pixels_image, masMoon[phase]))
+        {
+           ESP_LOGI("Display", "Can't ionit picture");
+        }
+        else
+        {
+            tft_send_picturte(MOON_X, MOON_Y, MOON_W, MOON_H, pixels_image);
+            free_image(&pixels_image, masMoon[phase]);
+        }
+}
+
 void drawunfillRectangle(int16_t x, int16_t y, int16_t w, int16_t h, int16_t s, uint16_t color, uint16_t colorBG)
 {
     tft_rect(x, y, w, h, colorBG);
@@ -236,8 +446,8 @@ void setTerm(int16_t val)
         st7735_rect(X_TERM + (WIDTH_IN_RECT - fill), Y_TERM, fill, HEIGHT_IN_RECT, color);*/
 
         uint16_t fill = TEMPERATURE_H*(val - TERM_MIN)/(TERM_MAX - TERM_MIN);
-        send_picturte(X_TERM, Y_TERM+fill, TEMPERATURE_W, TEMPERATURE_H-fill, pixels_temp0);
-        send_picturte(X_TERM, Y_TERM, TEMPERATURE_W, fill, &pixels_temp1[TEMPERATURE_H-fill]);
+        tft_send_picturte(X_TERM, Y_TERM+fill, TEMPERATURE_W, TEMPERATURE_H-fill, pixels_temp0);
+        tft_send_picturte(X_TERM, Y_TERM, TEMPERATURE_W, fill, &pixels_temp1[TEMPERATURE_H-fill]);
 
         char buff[10];
         sprintf(buff, "%3d C", val);
@@ -292,8 +502,8 @@ void setHumiditi(uint16_t val)
         st7735_rect(X_HUMIDITI + (WIDTH_IN_RECT - fill), Y_HUMIDITI, fill, HEIGHT_IN_RECT, COLOR_GREEN);*/
 
         uint16_t fill = HUMIDITY_H*val/100;
-        send_picturte(X_HUMIDITI, Y_HUMIDITI+fill, HUMIDITY_W, HUMIDITY_H-fill, pixels_hum0);
-        send_picturte(X_HUMIDITI, Y_HUMIDITI, HUMIDITY_W, fill, &pixels_hum1[HUMIDITY_H-fill]);
+        tft_send_picturte(X_HUMIDITI, Y_HUMIDITI+fill, HUMIDITY_W, HUMIDITY_H-fill, pixels_hum0);
+        tft_send_picturte(X_HUMIDITI, Y_HUMIDITI, HUMIDITY_W, fill, &pixels_hum1[HUMIDITY_H-fill]);
 
 
         char buff[10];
@@ -388,7 +598,7 @@ void print_im1()
     }
     else
     {
-        send_picturte(20, 20, IM1_W, IM1_H, pixels_im1);
+        tft_send_picturte(20, 20, IM1_W, IM1_H, pixels_im1);
         free_image(&pixels_im1, Im1);
     }
 }
@@ -402,7 +612,149 @@ void print_im2()
     }
     else
     {
-        send_picturte(20, 20, IM2_W, IM2_H, pixels_im2);
+        tft_send_picturte(20, 20, IM2_W, IM2_H, pixels_im2);
         free_image(&pixels_im2, Im2);
     }
 }
+
+void setWheather(OpenWeather *wheather)
+{
+    if(stateD != stateWeather)
+        return;
+
+    uint16_t **pixels_image;
+    Image im;
+    im = getImageWheather(*wheather, true);
+    if(decode_image(&pixels_image, im))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(WHEATHER_IMG_NOW_X, WHEATHER_IMG_NOW_Y, WEATHERB_W, WEATHERB_H, pixels_image);
+        free_image(&pixels_image, im);
+    }
+
+    im = getWind(wheather->wind_deg);
+    if(decode_image(&pixels_image, im))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(WIND_IMG_NOW_X, WIND_IMG_NOW_Y, WIND_W, WIND_H, pixels_image);
+        free_image(&pixels_image, im);
+    }
+
+    char buffer[60] = {0};
+
+    sprintf(buffer, "%d m/s", wheather->wind_speed);
+    tft_draw_string(WIND_SPEED_NOW_X, WIND_SPEED_NOW_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "%d C", (int)(wheather->temp));
+    tft_draw_string(TEMP_NOW_X, TEMP_NOW_Y, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 4);
+
+    memset(buffer, 0, 60);
+    sprintf(buffer, "Feel %d C", (int)(wheather->feels_like));
+    tft_draw_string(300, 100, buffer, ILI9341_COLOR565(0xF8, 0xB4, 0x00), 0x0000, 2);
+}
+
+void prontTestIm(Image path0, Image path1, Image path2, Image path3, int W, int H0, int H1)
+{
+    uint16_t **pixels_image;
+    if(decode_image(&pixels_image, path0))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(0, H1, W, H0, pixels_image);
+        free_image(&pixels_image, path0);
+    }
+
+    if(decode_image(&pixels_image, path1))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(W, H1, W, H0, pixels_image);
+        free_image(&pixels_image, path1);
+    }
+
+    if(decode_image(&pixels_image, path2))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(0, 0, W, H1, pixels_image);
+        free_image(&pixels_image, path2);
+    }
+
+    if(decode_image(&pixels_image, path3))
+    {
+       ESP_LOGI("Display", "Can't ionit picture");
+    }
+    else
+    {
+        tft_send_picturte(W, 0, W, H1, pixels_image);
+        free_image(&pixels_image, path3);
+    }
+}
+
+void print_imTest1()
+{
+    stateD = stateTest1;
+    prontTestIm(ImTest1_001, ImTest1_002, ImTest1_003, ImTest1_004, IM_TEST_1_W, IM_TEST_1_H, IM_TEST_3_H);
+}
+
+void print_imTest2()
+{
+    stateD = stateTest2;
+    prontTestIm(ImTest2_001, ImTest2_002, ImTest2_003, ImTest2_004, IM_TEST_1_W, IM_TEST_1_H, IM_TEST_3_H);
+}
+
+void print_imTest3()
+{
+    stateD = stateTest3;
+    prontTestIm(ImTest3_001, ImTest3_002, ImTest3_003, ImTest3_004, IM_TEST_1_W, IM_TEST_1_H, IM_TEST_3_H);
+}
+
+void print_imTest4()
+{
+    stateD = stateTest4;
+    prontTestIm(ImTest4_001, ImTest4_002, ImTest4_003, ImTest4_004, IM_TEST_1_W, IM_TEST_1_H, IM_TEST_3_H);
+}
+
+void print_imTestTiger()
+{
+    stateD = stateTestTiger;
+    prontTestIm(ImTestTiger_001, ImTestTiger_002, ImTestTiger_003, ImTestTiger_004, IM_TEST_TIGER_W, IM_TEST_TIGER_H, IM_TEST_TIGER_H);
+}
+
+void print_imTestNy0()
+{
+    stateD = stateTestNu0;
+    prontTestIm(ImTestNy0_001, ImTestNy0_002, ImTestNy0_003, ImTestNy0_004, IM_TEST_NU0_W, IM_TEST_NU0_H, IM_TEST_NU0_H);
+}
+
+void print_imTestNy1()
+{
+    stateD = stateTestNu1;
+    prontTestIm(ImTestNy1_001, ImTestNy1_002, ImTestNy1_003, ImTestNy1_004, IM_TEST_NU1_W, IM_TEST_NU1_H, IM_TEST_NU1_H);
+}
+
+void print_imTestNy2()
+{
+    stateD = stateTestNu2;
+    prontTestIm(ImTestNy2_001, ImTestNy2_002, ImTestNy2_003, ImTestNy2_004, IM_TEST_NU2_W, IM_TEST_NU2_12_H, IM_TEST_NU2_34_H);
+}
+
+void print_imTestNy3()
+{
+    stateD = stateTestNu3;
+    prontTestIm(ImTestNy3_001, ImTestNy3_002, ImTestNy3_003, ImTestNy3_004, IM_TEST_NU3_W, IM_TEST_NU3_H, IM_TEST_NU3_H);
+}
+

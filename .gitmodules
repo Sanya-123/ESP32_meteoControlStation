@@ -1,3 +1,6 @@
 [submodule "component/wifi_manager"]
 	path = component/wifi_manager
 	url = https://github.com/tonyp7/esp32-wifi-manager
+[submodule "component/esp_nrf24"]
+	path = component/esp_nrf24
+	url = https://github.com/jman168/esp_nrf24

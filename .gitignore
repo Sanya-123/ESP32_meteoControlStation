@@ -50,6 +50,7 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+*.projbuild
 
 # Eclipse
 .metadata/
@@ -77,6 +78,8 @@ wifi_manager/doc/
 
 build
 sdkconfig.old
-
+main/tft
+main/tft2
+main/weather
 
 
