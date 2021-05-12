@@ -11,7 +11,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
-
+#define DEFOULT_BUFF_NRF_SIZE   256
 
 #define HIGH 1
 #define LOW  0
@@ -32,12 +32,44 @@ void delay_us(uint16_t us)
     vTaskDelay(us > 1000 ? us/1000 : 1);
 }
 
+esp_err_t esp_transmiteResiveSPI(uint8_t *dataTx, uint16_t sizeTx, uint8_t *dataRx, uint16_t sizeRx, uint8_t *status)
+{
+    uint8_t buffRx[256], buffTx[256];
+
+    spi_transaction_t t = {
+//        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
+        .length = (sizeTx + sizeRx)*8,
+    };
+
+    t.rx_buffer = buffRx;
+    t.tx_buffer = buffTx;
+
+    memset(buffTx, 0xFF, sizeTx + sizeRx);
+    if(dataTx)
+        memcpy(buffTx, dataTx, sizeTx);
+
+    csn(LOW);
+    //spi_device_polling_transmit ; spi_device_transmit
+    esp_err_t ret = spi_device_transmit(hspi1.spi_dev, &t);
+    csn(HIGH);
+    if(ret == ESP_OK)
+    {
+        if(dataRx)
+            memcpy(dataRx, &buffRx[sizeTx], sizeRx);
+        if(status)
+            *status = buffRx[0];
+    }
+
+
+    return ret;
+}
 
 void csn(uint8_t level)
 {
 //    HAL_GPIO_WritePin(CSN_GPIO_Port, CSN_Pin, level);
     //delay_us(5);
-    gpio_set_level(hspi1.cs_io_num, level);
+
+//    gpio_set_level(hspi1.cs_io_num, level);
 }
 
 void ce(uint8_t level)
@@ -51,29 +83,16 @@ uint8_t read_register(uint8_t reg)
     uint8_t addr = R_REGISTER | (REGISTER_MASK & reg);
     uint8_t dt = 0;
 
-//    csn(LOW);
-//    HAL_SPI_TransmitReceive(&hspi1, &addr, &dt, 1, 100);
-//    HAL_SPI_TransmitReceive(&hspi1, (uint8_t*)0xff, &dt, 1, 100);
-//    csn(HIGH);
 
-    csn(LOW);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = 2*8,
-    };
-    t.tx_data[0] = addr;
-    t.tx_data[1] = 0xff;
+    uint8_t rxData;
+    esp_err_t ret = esp_transmiteResiveSPI(&addr, 1, &rxData, 1, NULL);
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_read_reg: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
 
-    return t.rx_data[1];
+    return rxData;
 }
 
 uint8_t write_registerMy(uint8_t reg, const uint8_t* buf, uint8_t len)
@@ -81,45 +100,13 @@ uint8_t write_registerMy(uint8_t reg, const uint8_t* buf, uint8_t len)
     uint8_t status = 0;
     uint8_t addr = W_REGISTER | (REGISTER_MASK & reg);
 
-//    csn(LOW);
-//    HAL_SPI_TransmitReceive(&hspi1, &addr, &status, 1, 100);
-//    //HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)buf, len);
-//    NRF_SPI_Transmit(&hspi1, (uint8_t*)buf, len);
-//    csn(HIGH);
     ESP_LOGI("nrf", "write_registerMy len=%d", (1 + len)*8);//TODO
-    csn(LOW);
-    esp_err_t ret;
-//    spi_transaction_t t = {
-//        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-//        .length = (1 + len)*8,
-////        .tx_buffer = &cmd,
-////        .rx_buffer = res
-//    };
-//    t.tx_data[0] = addr;
-//    memcpy(&(t.tx_data[1]), buf, len);
 
-////    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-//    ret = spi_device_transmit(hspi1.spi_dev, &t);
+    uint8_t txData[DEFOULT_BUFF_NRF_SIZE];
+    txData[0] = addr;
+    memcpy(&txData[1], buf, len);
+    esp_err_t ret = esp_transmiteResiveSPI(txData, len + 1, NULL, 0, &status);
 
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = (1 + 0)*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    status = t.rx_data[0];
-    memcpy(&(t.tx_data[0]), buf, len-1);
-
-    t.length = len*8 - 8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-
-    t.tx_data[0] = buf[len - 1];
-    t.length = 8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-
-    csn(HIGH);
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
@@ -134,31 +121,16 @@ uint8_t write_register(uint8_t reg, uint8_t value)
 {
     uint8_t status = 0;
     uint8_t addr = W_REGISTER | (REGISTER_MASK & reg);
-//    csn(LOW);
-//    HAL_SPI_TransmitReceive(&hspi1, &addr, &status, 1, 100);
-//    //HAL_SPI_Transmit_IT(&hspi1, &value, 1);
-//    NRF_SPI_Transmit(&hspi1, &value, 1);
-//    csn(HIGH);
-    csn(LOW);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = 2*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-    t.tx_data[1] = value;
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
+    uint8_t txData[2];
+    txData[0] = addr;
+    txData[1] = value;
+    esp_err_t ret = esp_transmiteResiveSPI(txData, 2, NULL, 0, &status);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
-
-    status = t.rx_data[0];
 
     return status;
 }
@@ -172,59 +144,53 @@ uint8_t write_payload(const void* buf, uint8_t data_len, const uint8_t writeType
     data_len = rf24_min(data_len, payload_size);
     uint8_t blank_len = dynamic_payloads_enabled ? 0 : payload_size - data_len;
 
-//    csn(LOW);
-//    HAL_SPI_TransmitReceive(&hspi1, &addr, &status, 1, 100);
-//    //HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)current, data_len);
-//    NRF_SPI_Transmit(&hspi1, (uint8_t*)current, data_len);
-
-//    while(blank_len--)
-//    {
-//        uint8_t empt = 0;
-//        //HAL_SPI_Transmit_IT(&hspi1, &empt, 1);
-//        NRF_SPI_Transmit(&hspi1, &empt, 1);
-//    }
-
-//    csn(HIGH);
 
     ESP_LOGI("nrf", "write_payload len=%d", (blank_len + data_len + 1)*8);//TODO
-    esp_err_t ret;
-    csn(LOW);
+//    esp_err_t ret;
+//    csn(LOW);
+////    spi_transaction_t t = {
+////        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
+////        .length = (blank_len + data_len + 1)*8,
+//////        .tx_buffer = &cmd,
+//////        .rx_buffer = res
+////    };
+////    t.tx_data[0] = addr;
+//////    t.tx_data[1] = value;
+////    memcpy(&(t.tx_data[1]), current, data_len);
+
+//////    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
+////    ret = spi_device_transmit(hspi1.spi_dev, &t);
+
 //    spi_transaction_t t = {
 //        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-//        .length = (blank_len + data_len + 1)*8,
+//        .length = (1 + 0)*8,
 ////        .tx_buffer = &cmd,
 ////        .rx_buffer = res
 //    };
+////    int lenP = (blank_len + data_len)*8;
 //    t.tx_data[0] = addr;
-////    t.tx_data[1] = value;
-//    memcpy(&(t.tx_data[1]), current, data_len);
+//    ret = spi_device_transmit(hspi1.spi_dev, &t);
+//    status = t.rx_data[0];
 
-////    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
+//    memcpy(&(t.tx_data[0]), current, 4);
+
+//    t.length = 4*8;
 //    ret = spi_device_transmit(hspi1.spi_dev, &t);
 
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = (1 + 0)*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-//    int lenP = (blank_len + data_len)*8;
-    t.tx_data[0] = addr;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    status = t.rx_data[0];
+//    memcpy(&(t.tx_data[0]), current + 4, 4);
 
-    memcpy(&(t.tx_data[0]), current, 4);
-
-    t.length = 4*8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-
-    memcpy(&(t.tx_data[0]), current + 4, 4);
-
-    t.length = 4*8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
+//    t.length = 4*8;
+//    ret = spi_device_transmit(hspi1.spi_dev, &t);
 
 
-    csn(HIGH);
+//    csn(HIGH);
+
+    uint8_t txData[DEFOULT_BUFF_NRF_SIZE];
+    txData[0] = addr;
+    memcpy(&txData[1], current, data_len);
+    memset(&txData[1 + data_len], 0x00, blank_len);
+    esp_err_t ret = esp_transmiteResiveSPI(txData, blank_len + data_len + 1, NULL, 0, &status);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
@@ -246,66 +212,15 @@ uint8_t read_payload(void* buf, uint8_t data_len)
     uint8_t blank_len = dynamic_payloads_enabled ? 0 : payload_size - data_len;
 
     uint8_t addr = R_RX_PAYLOAD;
-//    csn(LOW);
-//    //HAL_SPI_Transmit_IT(&hspi1, &addr, 1);
-//    NRF_SPI_Transmit(&hspi1, &addr, 1);
-//    HAL_SPI_Receive(&hspi1, (uint8_t*)current, data_len, 100);
 
-//    while(blank_len--)
-//    {
-//        uint8_t empt = 0;
-//        HAL_SPI_Receive(&hspi1, &empt, 1, 100);
-//    }
+    uint8_t rxData[DEFOULT_BUFF_NRF_SIZE];
+    esp_err_t ret = esp_transmiteResiveSPI(&addr, 1, rxData, blank_len + data_len, &status);
+    memcpy(buf, &rxData[0], data_len);
 
-//    csn(HIGH);
-    csn(LOW);
-
-    ESP_LOGI("nrf", "read_payload len=%d", (blank_len + data_len + 1)*8);
-    esp_err_t ret;
-//    spi_transaction_t t = {
-//        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-//        .length = (blank_len + data_len + 1)*8,
-////        .tx_buffer = &cmd,
-////        .rx_buffer = res
-//    };
-//    t.tx_data[0] = addr;
-////    t.tx_data[1] = value;
-////    memcpy(&(t.tx_data[1]), current, data_len);
-
-////    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-//    ret = spi_device_transmit(hspi1.spi_dev, &t);
-
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = (1 + 0)*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-//    int lenP = (blank_len + data_len)*8;
-    t.tx_data[0] = addr;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    status = t.rx_data[0];
-
-//    memcpy(&(t.tx_data[0]), current, 4);
-
-    t.length = 4*8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    memcpy(current, &(t.rx_data[0]), 4);
-
-//    memcpy(&(t.tx_data[0]), current + 4, 4);
-
-    t.length = 4*8;
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    memcpy(current+4, &(t.rx_data[0]), 4);
-
-
-    csn(HIGH);
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
-
-//    memcpy(current, &(t.rx_data[1]), data_len);
 
     return status;
 }
@@ -323,27 +238,14 @@ uint8_t flush_tx(void)
 uint8_t spiTrans(uint8_t cmd)
 {
     uint8_t status = 0;
-//    csn(LOW);
-//    HAL_SPI_TransmitReceive(&hspi1, &cmd, &status, 1, 100);
-//    csn(HIGH);
-    csn(LOW);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = 1*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = cmd;
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
+    esp_err_t ret = esp_transmiteResiveSPI(&cmd, 1, NULL, 0, &status);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
-    status = t.rx_data[0];
+
     return status;
 }
 
@@ -377,21 +279,7 @@ uint8_t NRF_Init(rf24_bus_cfg_t bus)
 
     ESP_LOGV("NRF", "rf24_init");
 
-    //RF24_CHECK(bus != NULL, "invalid bus config", ESP_ERR_INVALID_ARG);
-    //RF24_CHECK(GPIO_IS_VALID_OUTPUT_GPIO(bus.ce_io_num), "invalid CE pin", ESP_ERR_INVALID_ARG);
-    //RF24_CHECK(handle != NULL, "invalid output handle", ESP_ERR_INVALID_ARG);
-
     esp_err_t ret = ESP_OK;
-
-//    struct rf24_dev_t *rf_dev = malloc(sizeof(struct rf24_dev_t));
-//    if (rf_dev == NULL) {
-//        ESP_LOGW("NRF", "rf24_init: malloc failed");
-//        ret = ESP_ERR_NO_MEM;
-//        goto cleanup;
-//    }
-
-//    memset(rf_dev, 0, sizeof(struct rf24_dev_t));
-//    rf_dev->bus_cfg = *bus_cfg;
 
     // Initialize bus if needed.
     if (bus.init_host) {
@@ -416,7 +304,7 @@ uint8_t NRF_Init(rf24_bus_cfg_t bus)
     spi_device_interface_config_t spi_devcfg={
         .clock_speed_hz = 8000000,
         .mode = 0,
-        .spics_io_num = /*bus.cs_io_num*/-1,
+        .spics_io_num = bus.cs_io_num/*-1*/,
         .queue_size = 8
     };
 
@@ -432,27 +320,25 @@ uint8_t NRF_Init(rf24_bus_cfg_t bus)
 //    rf_dev->spi_dev = spi_dev;
 
     // Initialize GPIO for CE pin.
-//    gpio_set_direction(bus.ce_io_num, GPIO_MODE_OUTPUT);
-//    gpio_set_level(bus.ce_io_num, 0);
-//    gpio_set_direction(bus.cs_io_num, GPIO_MODE_OUTPUT);
-//    gpio_set_level(bus.cs_io_num, 1);
-
-    gpio_config_t io_conf;
-    //disable interrupt
-    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
-    //set as output mode
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    //bit mask of the pins that you want to set,e.g.GPIO18/19
-    io_conf.pin_bit_mask = (1ULL << bus.ce_io_num) | (1ULL << bus.cs_io_num);
-    //disable pull-down mode
-    io_conf.pull_down_en = 0;
-    //disable pull-up mode
-    io_conf.pull_up_en = 0;
-    //configure GPIO with the given settings
-    gpio_config(&io_conf);
-
+    gpio_set_direction(bus.ce_io_num, GPIO_MODE_OUTPUT);
     gpio_set_level(bus.ce_io_num, 0);
-    gpio_set_level(bus.cs_io_num, 1);
+
+//    gpio_config_t io_conf;
+//    //disable interrupt
+//    io_conf.intr_type = GPIO_PIN_INTR_DISABLE;
+//    //set as output mode
+//    io_conf.mode = GPIO_MODE_OUTPUT;
+//    //bit mask of the pins that you want to set,e.g.GPIO18/19
+//    io_conf.pin_bit_mask = (1ULL << bus.ce_io_num);
+//    //disable pull-down mode
+//    io_conf.pull_down_en = 0;
+//    //disable pull-up mode
+//    io_conf.pull_up_en = 0;
+//    //configure GPIO with the given settings
+//    gpio_config(&io_conf);
+
+//    gpio_set_level(bus.ce_io_num, 0);
+//    gpio_set_level(bus.cs_io_num, 1);
 
 //    *handle = rf_dev;
     bus.spi_dev = spi_dev;
@@ -611,32 +497,15 @@ bool TX_Pack(const void* buf, uint8_t len)
     const uint8_t* current = (const uint8_t*)buf;
     uint8_t addr = W_TX_PAYLOAD_NO_ACK;
 
-//    csn(LOW);
-//    NRF_SPI_Transmit(&hspi1, &addr, 1);
-//    //HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)current, data_len);
-//    NRF_SPI_Transmit(&hspi1, (uint8_t*)current, len);
-//    csn(HIGH);
-    csn(LOW);
-    ESP_LOGI("nrf", "TX_Pack len=%d", (len + 1)*8);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = (len + 1)*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-//    t.tx_data[1] = value;
-    memcpy(&(t.tx_data[1]), current, len);
+    uint8_t txData[DEFOULT_BUFF_NRF_SIZE];
+    txData[0] = addr;
+    memcpy(&txData[1], buf, len);
+    esp_err_t ret = esp_transmiteResiveSPI(txData, len + 1, NULL, 0, NULL);
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
-//    status = t.rx_data[0];
 
     ce(HIGH);
     delay_us(15);
@@ -667,33 +536,18 @@ void maskIRQ(bool tx, bool fail, bool rx)
 uint8_t getDynamicPayloadSize(void)
 {
     uint8_t result = 0, addr;
-//    csn(LOW);
     addr = R_RX_PL_WID;
-//    HAL_SPI_TransmitReceive(&hspi1, &addr, &result, 1, 100);
-//    HAL_SPI_TransmitReceive(&hspi1, (uint8_t*)0xff, &result, 1, 100);
-//    csn(HIGH);
-    csn(LOW);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = 2*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-    t.tx_data[1] = 0xff;
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
+    uint8_t rxData;
+    esp_err_t ret = esp_transmiteResiveSPI(&addr, 1, &rxData, 1, &result);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return 0;
     }
-    result = t.rx_data[0];
 
 
-    if(result > 32)
+    if(/*result*/rxData > 32)
     {
         flush_rx();
 //        HAL_Delay(2);
@@ -701,7 +555,7 @@ uint8_t getDynamicPayloadSize(void)
         return 0;
     }
 
-    return result;
+    return /*result*/rxData;
 }
 
 bool availableMy(void)
@@ -796,26 +650,12 @@ void closeReadingPipe(uint8_t pipe)
 void toggle_features(void)
 {
     uint8_t addr = ACTIVATE;
-//    csn(LOW);
-//    //HAL_SPI_Transmit_IT(&hspi1, &addr, 1);
-//    NRF_SPI_Transmit(&hspi1, &addr, 1);
-//    //HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)0x73, 1);
-//    NRF_SPI_Transmit(&hspi1, (uint8_t*)0x73, 1);
-//    csn(HIGH);
-    csn(LOW);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = 2*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-    t.tx_data[1] = 0x73;
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
+    uint8_t txData[2];
+    txData[0] = addr;
+    txData[1] = 0x73;
+    esp_err_t ret = esp_transmiteResiveSPI(txData, 2, NULL, 0, NULL);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return;
@@ -853,28 +693,14 @@ void writeAckPayload(uint8_t pipe, const void* buf, uint8_t len)
     const uint8_t* current = (const uint8_t*)buf;
     uint8_t data_len = rf24_min(len, 32);
     uint8_t addr = W_ACK_PAYLOAD | (pipe & 0x07);
-//    csn(LOW);
-//    //HAL_SPI_Transmit_IT(&hspi1, &addr, 1);
-//    NRF_SPI_Transmit(&hspi1, &addr, 1);
-//    //HAL_SPI_Transmit_IT(&hspi1, (uint8_t*)current, data_len);
-//    NRF_SPI_Transmit(&hspi1, (uint8_t*)current, data_len);
-//    csn(HIGH);
 
-    csn(LOW);
     ESP_LOGI("nrf", "writeAckPayload len=%d", (data_len + 1)*8);
-    esp_err_t ret;
-    spi_transaction_t t = {
-        .flags = SPI_TRANS_USE_TXDATA | SPI_TRANS_USE_RXDATA,
-        .length = (data_len + 1)*8,
-//        .tx_buffer = &cmd,
-//        .rx_buffer = res
-    };
-    t.tx_data[0] = addr;
-    memcpy(&(t.tx_data[1]), current, data_len);
 
-//    ret = spi_device_polling_transmit(hspi1.spi_dev, &t);
-    ret = spi_device_transmit(hspi1.spi_dev, &t);
-    csn(HIGH);
+    uint8_t txData[DEFOULT_BUFF_NRF_SIZE];
+    txData[0] = addr;
+    memcpy(&txData[1], current, data_len);
+    esp_err_t ret = esp_transmiteResiveSPI(txData, data_len + 1, NULL, 0, NULL);
+
     if (ret != ESP_OK) {
         ESP_LOGW("NRF", "rf24_cmd: spi_device_polling_transmit failed: %s", esp_err_to_name(ret));
         return;
@@ -1042,39 +868,4 @@ void disableCRC(void)
 void setRetries(uint8_t delay, uint8_t count)
 {
     write_register(SETUP_RETR, (delay&0xf)<<ARD | (count&0xf)<<ARC);
-}
-
-
-void NRF_SPI_Transmit(rf24_bus_cfg_t *hspi, uint8_t *pData, uint16_t Size)
-{
-//    /* Process Locked */
-//    //__HAL_LOCK(hspi);
-
-//    uint8_t *pTxBuffPtr  = (uint8_t *)pData;
-//    __IO uint16_t  TxXferCount = Size;
-
-//    /* Check if the SPI is already enabled */
-//    if ((hspi->Instance->CR1 & SPI_CR1_SPE) != SPI_CR1_SPE)
-//    {
-//        /* Enable SPI peripheral */
-//        __HAL_SPI_ENABLE(hspi);
-//    }
-
-//    while (TxXferCount > 0U)
-//    {
-//        /* Wait until TXE flag is set to send data */
-//        if (__HAL_SPI_GET_FLAG(hspi, SPI_FLAG_TXE))
-//        {
-//            *((__IO uint8_t *)&hspi->Instance->DR) = (*pTxBuffPtr);
-//            pTxBuffPtr += sizeof(uint8_t);
-//            TxXferCount--;
-//        }
-//    }
-
-
-//    __HAL_SPI_CLEAR_OVRFLAG(hspi);
-
-//    /* Process Unlocked */
-//    //__HAL_UNLOCK(hspi);
-
 }

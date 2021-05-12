@@ -39,9 +39,9 @@
 //#include "lwip/netdb.h"
 //#include "lwip/dns.h"
 //#include "esp32-rf24.h"
-//#include "RF24.h"
-#include "esp_nrf24.h"
-#include "esp_nrf24_map.h"
+#include "RF24.h"
+//#include "esp_nrf24.h"
+//#include "esp_nrf24_map.h"
 //#include "nrf24l01.h"
 #include "openWeather.h"
 
@@ -431,43 +431,43 @@ void nRF24_task(void *pvParameters)
     (void)pvParameters;
 
 
-//    rf24_bus_cfg_t rf24_bus_cfg = {
-//        .spi_host = VSPI_HOST,
-//        .init_host = false,
-//        .mosi_io_num = GPIO_SPI_MOSI,
-//        .miso_io_num = GPIO_SPI_MISO,
-//        .sclk_io_num = GPIO_SPI_CLK,
-//        .cs_io_num = GPIO_NRF_CS,
-//        .ce_io_num = GPIO_NRF_CE
-//    };
-    nrf24_t dev;
-    nrf24_init(&dev, VSPI_HOST, GPIO_SPI_MOSI, GPIO_SPI_MISO, GPIO_SPI_CLK, GPIO_NRF_CE, GPIO_NRF_CS);
-//    NRF_Init(rf24_bus_cfg);
+    rf24_bus_cfg_t rf24_bus_cfg = {
+        .spi_host = VSPI_HOST,
+        .init_host = false,
+        .mosi_io_num = GPIO_SPI_MOSI,
+        .miso_io_num = GPIO_SPI_MISO,
+        .sclk_io_num = GPIO_SPI_CLK,
+        .cs_io_num = GPIO_NRF_CS,
+        .ce_io_num = GPIO_NRF_CE
+    };
+//    nrf24_t dev;
+//    nrf24_init(&dev, VSPI_HOST, GPIO_SPI_MOSI, GPIO_SPI_MISO, GPIO_SPI_CLK, GPIO_NRF_CE, GPIO_NRF_CS);
+    NRF_Init(rf24_bus_cfg);
     const uint64_t pipe1 = 0xE8E8F0F0E2LL;  //идентификатор трубы с номером 1
     ////////////// SET ////////////////
 //    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
     uint8_t tmp = 0;
-    nrf24_set_register(&dev, NRF24_REG_EN_AA, &tmp, 1);
-//    setAutoAck(false); //отключаем автоответе
-    nrf24_set_register(&dev, NRF24_REG_FEATURE, &tmp, 1);
-    nrf24_set_register(&dev, NRF24_REG_DYNPD, &tmp, 1);
-//    disableDynamicPayloads(); //отключаем динамический размер нагрузки
-//    //disableCRC();
-    nrf24_set_payload_length(&dev, 8);
-//    setPayloadSize(8); //размер нагрузки 8 байт
-    nrf24_set_rf_channel(&dev, 100);
-//    setChannel(100); //канал 19
+//    nrf24_set_register(&dev, NRF24_REG_EN_AA, &tmp, 1);
+    setAutoAck(false); //отключаем автоответе
+//    nrf24_set_register(&dev, NRF24_REG_FEATURE, &tmp, 1);
+//    nrf24_set_register(&dev, NRF24_REG_DYNPD, &tmp, 1);
+    disableDynamicPayloads(); //отключаем динамический размер нагрузки
+    //disableCRC();
+//    nrf24_set_payload_length(&dev, 8);
+    setPayloadSize(8); //размер нагрузки 8 байт
+//    nrf24_set_rf_channel(&dev, 100);
+    setChannel(100); //канал 19
 ////    openWritingPipe(pipe1); //открываем трубу с номером 1
-    nrf24_set_rx_address(&dev, NRF24_P1, &pipe1, 8);
-    nrf24_enable_rx_pipe(&dev, NRF24_P1);
-//    openReadingPipe(1, pipe1); //открываем трубу с номером 1
+//    nrf24_set_rx_address(&dev, NRF24_P1, &pipe1, 8);
+//    nrf24_enable_rx_pipe(&dev, NRF24_P1);
+    openReadingPipe(1, pipe1); //открываем трубу с номером 1
 
-//    startListening();
-//    ///////////////////////////////////
+    startListening();
+    ///////////////////////////////////
 
     uint8_t buff[8] = {0};
 //    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
-//    int status;
+    int status;
 ////    int i = 0;
 
 //    while(1) {vTaskDelay(1000/portTICK_RATE_MS);}
@@ -475,8 +475,8 @@ void nRF24_task(void *pvParameters)
     while(1)
     {
         vTaskDelay(1000/portTICK_RATE_MS);
-//        if(!availableMy())
-        if(nrf24_get_data_available(&dev))
+        if(!availableMy())
+//        if(nrf24_get_data_available(&dev))
         {
 //            i++;
 //            if(i == 100)
@@ -489,10 +489,10 @@ void nRF24_task(void *pvParameters)
         }
         else
         {
-            nrf24_get_data(&dev, buff, 8);
-//            status = read_payload(buff, 8);
-    //        write_register(NRF_STATUS, (1 << RX_DR) | (1 << MAX_RT) | (1 << TX_DS));
-//            ESP_LOGI("nrf", "status = %d", status);
+//            nrf24_get_data(&dev, buff, 8);
+            status = read_payload(buff, 8);
+//            write_register(NRF_STATUS, (1 << RX_DR) | (1 << MAX_RT) | (1 << TX_DS));
+            ESP_LOGI("nrf", "status = %d", status);
             for(int i = 0; i < 8; i++)
             {
                 ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
@@ -674,9 +674,9 @@ void app_main(void)
 {
     esp_log_level_set("MQTT", ESP_LOG_NONE);
     esp_log_level_set("wifi_manager", ESP_LOG_NONE);
-//    esp_log_level_set("weathe:", ESP_LOG_NONE);
-//    esp_log_level_set("HTTP", ESP_LOG_NONE);
-//    esp_log_level_set("HTTP_REQ", ESP_LOG_NONE);
+    esp_log_level_set("weathe:", ESP_LOG_NONE);
+    esp_log_level_set("HTTP", ESP_LOG_NONE);
+    esp_log_level_set("HTTP_REQ", ESP_LOG_NONE);
     esp_log_level_set("TRANS_TCP", ESP_LOG_NONE);
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_NONE);
 
@@ -719,7 +719,7 @@ void app_main(void)
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-//    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
+    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
     xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
     xTaskCreate(taskNextState, "ChangeD", 512, NULL, 2, NULL);
 
