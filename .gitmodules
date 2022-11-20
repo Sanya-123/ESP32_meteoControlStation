@@ -1,6 +1,9 @@
 [submodule "component/wifi_manager"]
 	path = component/wifi_manager
 	url = https://github.com/tonyp7/esp32-wifi-manager
-[submodule "component/esp_nrf24"]
-	path = component/esp_nrf24
-	url = https://github.com/jman168/esp_nrf24
+[submodule "component/lvgl_esp32_drivers"]
+	path = component/lvgl_esp32_drivers
+	url = https://github.com/lvgl/lvgl_esp32_drivers.git
+[submodule "component/lvgl"]
+	path = component/lvgl
+	url = https://github.com/lvgl/lvgl.git

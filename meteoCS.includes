@@ -103,3 +103,14 @@ IDF_PATH=/home/user/.esp/esp-idf
 /home/user/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/xtensa-esp32-elf/include/c++/5.2.0/xtensa-esp32-elf
 /home/user/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include
 /home/user/.espressif/tools/xtensa-esp32-elf/esp-2020r3-8.4.0/xtensa-esp32-elf/lib/gcc/xtensa-esp32-elf/5.2.0/include-fixed
+
+component/lvgl/
+component/lvgl/src/
+component/lvgl/src/lv_core/
+component/lvgl/src/lv_draw/
+component/lvgl/src/lv_font/
+component/lvgl/src/lv_gpu/
+component/lvgl/src/lv_hal/
+component/lvgl/src/lv_misc/
+component/lvgl/src/lv_themes/
+component/lvgl/src/lv_widgets/

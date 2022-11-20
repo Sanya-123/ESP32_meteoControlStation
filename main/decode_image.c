@@ -23,29 +23,29 @@ format if you want to use a different image file.
 #include <string.h>
 
 //Reference the binary-included jpeg file
-extern const uint8_t image_jpg_start[] asm("_binary_imager_jpg_start");
-//extern const uint8_t image_jpg_end[] asm("_binary_imager_jpg_end");
+//extern const uint8_t image_jpg_start[] asm("_binary_imager_jpg_start");
+////extern const uint8_t image_jpg_end[] asm("_binary_imager_jpg_end");
 
-extern const uint8_t hum0_jpg_start[] asm("_binary_humidity0_jpg_start");
-//extern const uint8_t hum0_jpg_end[] asm("_binary_humidity0_jpg_end");
+//extern const uint8_t hum0_jpg_start[] asm("_binary_humidity0_jpg_start");
+////extern const uint8_t hum0_jpg_end[] asm("_binary_humidity0_jpg_end");
 
-extern const uint8_t hum1_jpg_start[] asm("_binary_humidity1_jpg_start");
-//extern const uint8_t hum1_jpg_end[] asm("_binary_humidity1_jpg_end");
+//extern const uint8_t hum1_jpg_start[] asm("_binary_humidity1_jpg_start");
+////extern const uint8_t hum1_jpg_end[] asm("_binary_humidity1_jpg_end");
 
-extern const uint8_t temp0_jpg_start[] asm("_binary_temperature0_jpg_start");
-//extern const uint8_t temp0_jpg_end[] asm("_binary_temperature0_jpg_end");
+//extern const uint8_t temp0_jpg_start[] asm("_binary_temperature0_jpg_start");
+////extern const uint8_t temp0_jpg_end[] asm("_binary_temperature0_jpg_end");
 
-extern const uint8_t temp1_jpg_start[] asm("_binary_temperature1_jpg_start");
-//extern const uint8_t temp1_jpg_end[] asm("_binary_temperature1_jpg_end");
+//extern const uint8_t temp1_jpg_start[] asm("_binary_temperature1_jpg_start");
+////extern const uint8_t temp1_jpg_end[] asm("_binary_temperature1_jpg_end");
 
-extern const uint8_t co2_jpg_start[] asm("_binary_co2_jpg_start");
-//extern const uint8_t co2_jpg_end[] asm("_binary_co2_jpg_end");
+//extern const uint8_t co2_jpg_start[] asm("_binary_co2_jpg_start");
+////extern const uint8_t co2_jpg_end[] asm("_binary_co2_jpg_end");
 
-extern const uint8_t im1_jpg_start[] asm("_binary_im1_jpg_start");
-//extern const uint8_t im1_jpg_end[] asm("_binary_im1_jpg_end");
+//extern const uint8_t im1_jpg_start[] asm("_binary_im1_jpg_start");
+////extern const uint8_t im1_jpg_end[] asm("_binary_im1_jpg_end");
 
-extern const uint8_t im2_jpg_start[] asm("_binary_im2_jpg_start");
-//extern const uint8_t im2_jpg_end[] asm("_binary_im2_jpg_end");
+//extern const uint8_t im2_jpg_start[] asm("_binary_im2_jpg_start");
+////extern const uint8_t im2_jpg_end[] asm("_binary_im2_jpg_end");
 
 //wind
 extern const uint8_t windE_jpg_start[] asm("_binary_E_jpg_start");
@@ -154,6 +154,16 @@ extern const uint8_t ny_test3_002_jpg_start[] asm("_binary_ny_test3_002_jpg_star
 extern const uint8_t ny_test3_003_jpg_start[] asm("_binary_ny_test3_003_jpg_start");
 extern const uint8_t ny_test3_004_jpg_start[] asm("_binary_ny_test3_004_jpg_start");
 
+extern const uint8_t g1_test_001_jpg_start[] asm("_binary_group1_001_jpg_start");
+extern const uint8_t g1_test_002_jpg_start[] asm("_binary_group1_002_jpg_start");
+extern const uint8_t g1_test_003_jpg_start[] asm("_binary_group1_003_jpg_start");
+extern const uint8_t g1_test_004_jpg_start[] asm("_binary_group1_004_jpg_start");
+
+extern const uint8_t g2_test_001_jpg_start[] asm("_binary_group2_001_jpg_start");
+extern const uint8_t g2_test_002_jpg_start[] asm("_binary_group2_002_jpg_start");
+extern const uint8_t g2_test_003_jpg_start[] asm("_binary_group2_003_jpg_start");
+extern const uint8_t g2_test_004_jpg_start[] asm("_binary_group2_004_jpg_start");
+
 //Define the height and width of the jpeg file. Make sure this matches the actual jpeg
 //dimensions.
 #define IMAGE_W 336
@@ -222,15 +232,15 @@ esp_err_t decode_image(uint16_t ***pixels, Image im)
     //Alocate pixel memory. Each line is an array of IMAGE_W 16-bit pixels; the `*pixels` array itself contains pointers to these lines.
     switch(im)
     {
-    	case(imager): heightPixel = IMAGE_H;  widthPixel = IMAGE_W; jd.inData = image_jpg_start; break;
-    	case(hum0): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; jd.inData = hum0_jpg_start; break;
-    	case(hum1): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; jd.inData = hum1_jpg_start; break;
-    	case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp0_jpg_start; break;
-    	case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp1_jpg_start; break;
-        case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; jd.inData = co2_jpg_start; break;
+//    	case(imager): heightPixel = IMAGE_H;  widthPixel = IMAGE_W; jd.inData = image_jpg_start; break;
+//    	case(hum0): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; jd.inData = hum0_jpg_start; break;
+//    	case(hum1): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; jd.inData = hum1_jpg_start; break;
+//    	case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp0_jpg_start; break;
+//    	case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; jd.inData = temp1_jpg_start; break;
+//        case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; jd.inData = co2_jpg_start; break;
 
-        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; jd.inData = im1_jpg_start; break;
-        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; jd.inData = im2_jpg_start; break;
+//        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; jd.inData = im1_jpg_start; break;
+//        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; jd.inData = im2_jpg_start; break;
 
         case(WindE): heightPixel = WIND_H;  widthPixel = WIND_W; jd.inData = windE_jpg_start; break;
         case(WindN): heightPixel = WIND_H;  widthPixel = WIND_W; jd.inData = windN_jpg_start; break;
@@ -298,47 +308,57 @@ esp_err_t decode_image(uint16_t ***pixels, Image im)
         case(Moon_L22): heightPixel = MOON_H;  widthPixel = MOON_W; jd.inData = moonphase_L22_jpg_start; break;
         case(Moon_L23): heightPixel = MOON_H;  widthPixel = MOON_W; jd.inData = moonphase_L23_jpg_start; break;
 
-        case(ImTest1_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test1_001_jpg_start; break;
-        case(ImTest1_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test1_002_jpg_start; break;
-        case(ImTest1_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test1_003_jpg_start; break;
-        case(ImTest1_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test1_004_jpg_start; break;
-        case(ImTest2_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test2_001_jpg_start; break;
-        case(ImTest2_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test2_002_jpg_start; break;
-        case(ImTest2_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test2_003_jpg_start; break;
-        case(ImTest2_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test2_004_jpg_start; break;
-        case(ImTest3_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test3_001_jpg_start; break;
-        case(ImTest3_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test3_002_jpg_start; break;
-        case(ImTest3_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test3_003_jpg_start; break;
-        case(ImTest3_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test3_004_jpg_start; break;
-        case(ImTest4_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test4_001_jpg_start; break;
-        case(ImTest4_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test4_002_jpg_start; break;
-        case(ImTest4_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test4_003_jpg_start; break;
-        case(ImTest4_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test4_004_jpg_start; break;
+//        case(ImTest1_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test1_001_jpg_start; break;
+//        case(ImTest1_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test1_002_jpg_start; break;
+//        case(ImTest1_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test1_003_jpg_start; break;
+//        case(ImTest1_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test1_004_jpg_start; break;
+//        case(ImTest2_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test2_001_jpg_start; break;
+//        case(ImTest2_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test2_002_jpg_start; break;
+//        case(ImTest2_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test2_003_jpg_start; break;
+//        case(ImTest2_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test2_004_jpg_start; break;
+//        case(ImTest3_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test3_001_jpg_start; break;
+//        case(ImTest3_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test3_002_jpg_start; break;
+//        case(ImTest3_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test3_003_jpg_start; break;
+//        case(ImTest3_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test3_004_jpg_start; break;
+//        case(ImTest4_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; jd.inData = test4_001_jpg_start; break;
+//        case(ImTest4_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; jd.inData = test4_002_jpg_start; break;
+//        case(ImTest4_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; jd.inData = test4_003_jpg_start; break;
+//        case(ImTest4_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; jd.inData = test4_004_jpg_start; break;
 
-        case(ImTestTiger_001): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_001_jpg_start; break;
-        case(ImTestTiger_002): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_002_jpg_start; break;
-        case(ImTestTiger_003): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_003_jpg_start; break;
-        case(ImTestTiger_004): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_004_jpg_start; break;
+//        case(ImTestTiger_001): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_001_jpg_start; break;
+//        case(ImTestTiger_002): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_002_jpg_start; break;
+//        case(ImTestTiger_003): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_003_jpg_start; break;
+//        case(ImTestTiger_004): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; jd.inData = test_tiger_004_jpg_start; break;
 
-        case(ImTestNy0_001): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_001_jpg_start; break;
-        case(ImTestNy0_002): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_002_jpg_start; break;
-        case(ImTestNy0_003): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_003_jpg_start; break;
-        case(ImTestNy0_004): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_004_jpg_start; break;
+//        case(ImTestNy0_001): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_001_jpg_start; break;
+//        case(ImTestNy0_002): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_002_jpg_start; break;
+//        case(ImTestNy0_003): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_003_jpg_start; break;
+//        case(ImTestNy0_004): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; jd.inData = ny_test0_004_jpg_start; break;
 
-        case(ImTestNy1_001): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_001_jpg_start; break;
-        case(ImTestNy1_002): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_002_jpg_start; break;
-        case(ImTestNy1_003): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_003_jpg_start; break;
-        case(ImTestNy1_004): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_004_jpg_start; break;
+//        case(ImTestNy1_001): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_001_jpg_start; break;
+//        case(ImTestNy1_002): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_002_jpg_start; break;
+//        case(ImTestNy1_003): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_003_jpg_start; break;
+//        case(ImTestNy1_004): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; jd.inData = ny_test1_004_jpg_start; break;
 
-        case(ImTestNy2_001): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_001_jpg_start; break;
-        case(ImTestNy2_002): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_002_jpg_start; break;
-        case(ImTestNy2_003): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_003_jpg_start; break;
-        case(ImTestNy2_004): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_004_jpg_start; break;
+//        case(ImTestNy2_001): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_001_jpg_start; break;
+//        case(ImTestNy2_002): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_002_jpg_start; break;
+//        case(ImTestNy2_003): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_003_jpg_start; break;
+//        case(ImTestNy2_004): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; jd.inData = ny_test2_004_jpg_start; break;
 
-        case(ImTestNy3_001): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_001_jpg_start; break;
-        case(ImTestNy3_002): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_002_jpg_start; break;
-        case(ImTestNy3_003): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_003_jpg_start; break;
-        case(ImTestNy3_004): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_004_jpg_start; break;
+//        case(ImTestNy3_001): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_001_jpg_start; break;
+//        case(ImTestNy3_002): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_002_jpg_start; break;
+//        case(ImTestNy3_003): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_003_jpg_start; break;
+//        case(ImTestNy3_004): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; jd.inData = ny_test3_004_jpg_start; break;
+
+//        case(ImTestG1_001): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g1_test_001_jpg_start; break;
+//        case(ImTestG1_002): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g1_test_002_jpg_start; break;
+//        case(ImTestG1_003): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g1_test_003_jpg_start; break;
+//        case(ImTestG1_004): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g1_test_004_jpg_start; break;
+
+//        case(ImTestG2_001): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g2_test_001_jpg_start; break;
+//        case(ImTestG2_002): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g2_test_002_jpg_start; break;
+//        case(ImTestG2_003): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g2_test_003_jpg_start; break;
+//        case(ImTestG2_004): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; jd.inData = g2_test_004_jpg_start; break;
 
     	default:goto err;
     
@@ -408,15 +428,15 @@ void free_image(uint16_t ***pixels, Image im)
     //Alocate pixel memory. Each line is an array of IMAGE_W 16-bit pixels; the `*pixels` array itself contains pointers to these lines.
     switch(im)
     {
-        case(imager): heightPixel = IMAGE_H;  widthPixel = IMAGE_W; break;
-        case(hum0): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
-        case(hum1): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
-        case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
-        case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
-        case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; break;
+//        case(imager): heightPixel = IMAGE_H;  widthPixel = IMAGE_W; break;
+//        case(hum0): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
+//        case(hum1): heightPixel = HUMIDITY_H;  widthPixel = HUMIDITY_W; break;
+//        case(temp0): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
+//        case(temp1): heightPixel = TEMPERATURE_H;  widthPixel = TEMPERATURE_W; break;
+//        case(CO2): heightPixel = CO2_H;  widthPixel = CO2_W; break;
 
-        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; break;
-        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; break;
+//        case(Im1): heightPixel = IM1_H;  widthPixel = IM1_W; break;
+//        case(Im2): heightPixel = IM2_H;  widthPixel = IM2_W; break;
 
         case(WindE): heightPixel = WIND_H;  widthPixel = WIND_W; break;
         case(WindN): heightPixel = WIND_H;  widthPixel = WIND_W; break;
@@ -484,44 +504,54 @@ void free_image(uint16_t ***pixels, Image im)
         case(Moon_L22):
         case(Moon_L23): heightPixel = MOON_H;  widthPixel = MOON_W; break;
 
-        case(ImTest1_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
-        case(ImTest1_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
-        case(ImTest1_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
-        case(ImTest1_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
-        case(ImTest2_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
-        case(ImTest2_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
-        case(ImTest2_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
-        case(ImTest2_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
-        case(ImTest3_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
-        case(ImTest3_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
-        case(ImTest3_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
-        case(ImTest3_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
-        case(ImTest4_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
-        case(ImTest4_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
-        case(ImTest4_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
-        case(ImTest4_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
+//        case(ImTest1_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
+//        case(ImTest1_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
+//        case(ImTest1_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
+//        case(ImTest1_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
+//        case(ImTest2_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
+//        case(ImTest2_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
+//        case(ImTest2_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
+//        case(ImTest2_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
+//        case(ImTest3_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
+//        case(ImTest3_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
+//        case(ImTest3_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
+//        case(ImTest3_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
+//        case(ImTest4_001): heightPixel = IM_TEST_1_H;  widthPixel = IM_TEST_1_W; break;
+//        case(ImTest4_002): heightPixel = IM_TEST_2_H;  widthPixel = IM_TEST_2_W; break;
+//        case(ImTest4_003): heightPixel = IM_TEST_3_H;  widthPixel = IM_TEST_3_W; break;
+//        case(ImTest4_004): heightPixel = IM_TEST_4_H;  widthPixel = IM_TEST_4_W; break;
 
-        case(ImTestTiger_001): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
-        case(ImTestTiger_002): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
-        case(ImTestTiger_003): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
-        case(ImTestTiger_004): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
+//        case(ImTestTiger_001): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
+//        case(ImTestTiger_002): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
+//        case(ImTestTiger_003): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
+//        case(ImTestTiger_004): heightPixel = IM_TEST_TIGER_H;  widthPixel = IM_TEST_TIGER_W; break;
 
-        case(ImTestNy0_001): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
-        case(ImTestNy0_002): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
-        case(ImTestNy0_003): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
-        case(ImTestNy0_004): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
-        case(ImTestNy1_001): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
-        case(ImTestNy1_002): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
-        case(ImTestNy1_003): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
-        case(ImTestNy1_004): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
-        case(ImTestNy2_001): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; break;
-        case(ImTestNy2_002): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; break;
-        case(ImTestNy2_003): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; break;
-        case(ImTestNy2_004): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; break;
-        case(ImTestNy3_001): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
-        case(ImTestNy3_002): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
-        case(ImTestNy3_003): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
-        case(ImTestNy3_004): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
+//        case(ImTestNy0_001): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
+//        case(ImTestNy0_002): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
+//        case(ImTestNy0_003): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
+//        case(ImTestNy0_004): heightPixel = IM_TEST_NU0_H;  widthPixel = IM_TEST_NU0_W; break;
+//        case(ImTestNy1_001): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
+//        case(ImTestNy1_002): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
+//        case(ImTestNy1_003): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
+//        case(ImTestNy1_004): heightPixel = IM_TEST_NU1_H;  widthPixel = IM_TEST_NU1_W; break;
+//        case(ImTestNy2_001): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; break;
+//        case(ImTestNy2_002): heightPixel = IM_TEST_NU2_12_H;  widthPixel = IM_TEST_NU2_W; break;
+//        case(ImTestNy2_003): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; break;
+//        case(ImTestNy2_004): heightPixel = IM_TEST_NU2_34_H;  widthPixel = IM_TEST_NU2_W; break;
+//        case(ImTestNy3_001): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
+//        case(ImTestNy3_002): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
+//        case(ImTestNy3_003): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
+//        case(ImTestNy3_004): heightPixel = IM_TEST_NU3_H;  widthPixel = IM_TEST_NU3_W; break;
+
+//        case(ImTestG1_001): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG1_002): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG1_003): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG1_004): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+
+//        case(ImTestG2_001): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG2_002): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG2_003): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
+//        case(ImTestG2_004): heightPixel = IM_TEST_GROUP_H;  widthPixel = IM_TEST_GROUP_W; break;
 
 
         default:return;

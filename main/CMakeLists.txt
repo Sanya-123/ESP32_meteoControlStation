@@ -1,6 +1,7 @@
 set(SOURCE "main.c" "net.c" "bme280_ok.c" "tft.c" "display.c" "uart2.c" "mh-z19.c" "bme_i2c.c"
 "./esp_request/esp_request.c" "./esp_request/req_list.c" "./esp_request/uri_parser.c" "./nrf24l01.c"
 "./cJSON/cJSON_Utils.c" "./cJSON/cJSON.c" "openWeather.c" "tjpgd.c" "decode_image.c"
+"display_gui.c"
 )
 
 
@@ -12,10 +13,9 @@ set(SOURCE "main.c" "net.c" "bme280_ok.c" "tft.c" "display.c" "uart2.c" "mh-z19.
 #            "./spiffs/esp_spiffs.c" "./spiffs/list.c" "./spiffs/mutex.c" "./spiffs/spiffs_cache.c" "./spiffs/spiffs_check.c"
 #            "./spiffs/spiffs_gc.c" "./spiffs/spiffs_hydrogen.c" "./spiffs/spiffs_nucleus.c" "./spiffs/spiffs_vfs.c"
 
-file(GLOB_RECURSE imagers images/wind/*.jpg images/wheather/*.jpg images/wheatherB/*.jpg images/moon/*.jpg images/test/*.jpg)
+file(GLOB_RECURSE imagers images/wind/*.jpg images/wheather/*.jpg images/wheatherB/*.jpg images/moon/*.jpg)
 
-set(img images/imager.jpg images/humidity0.jpg images/humidity1.jpg images/temperature0.jpg images/temperature1.jpg images/co2.jpg images/im1.jpg images/im2.jpg
-    ${imagers})
+set(img ${imagers})
 
 #images/wind/E.jpg images/wind/N.jpg images/wind/NE.jpg images/wind/NW.jpg images/wind/S.jpg images/wind/SE.jpg images/wind/SW.jpg images/wind/W.jpg
 #images/wheather/clear-day.jpg images/wheather/clear-night.jpg images/wheather/cloudy.jpg images/wheather/drizzle.jpg images/wheather/fog.jpg images/wheather/hail.jpg

@@ -12,3 +12,5 @@ COMPONENT_ADD_INCLUDEDIRS = wifi_manager
 COMPONENT_SRCDIRS = wifi_manager
 COMPONENT_DEPENDS = log esp_http_server
 COMPONENT_EMBED_FILES := wifi_manager/style.css wifi_manager/code.js wifi_manager/index.html
+
+CFLAGS+= -DLV_LVGL_H_INCLUDE_SIMPLE -DLV_VER_RES=240 -DLV_HOR_RES=320

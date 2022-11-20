@@ -18,11 +18,10 @@
 //#include "driver/mcpwm.h"
 #include "driver/gpio.h"
 //#include "soc/mcpwm_periph.h"
-#include "driver/gpio.h"
 #include "driver/i2c.h"
 #include "nvs_flash.h"
 #include "driver/mcpwm.h"
-#include "soc/mcpwm_periph.h"
+//#include "soc/mcpwm_periph.h"
 
 #include "gpioDEF.h"
 
@@ -31,13 +30,7 @@
 #include "bme280_ok.h"
 #include "display.h"
 #include "mh-z19.h"
-#include "gpioDEF.h"
 
-//#include "lwip/err.h"
-//#include "lwip/sockets.h"
-//#include "lwip/sys.h"
-//#include "lwip/netdb.h"
-//#include "lwip/dns.h"
 //#include "esp32-rf24.h"
 #include "RF24.h"
 //#include "esp_nrf24.h"
@@ -47,26 +40,30 @@
 
 #include "mqtt_client.h"
 
+//#include "demos/lv_demos.h"
+#include "examples/lv_examples.h"
+#include "display_gui.h"
+
 #define WHEATHER_DAYS_READ      5
 #define WHEATHER_HOUR_READ      24
 
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_3) | (1ULL << GPIO_INPUT_IO_4))
 
-#define GPIO_MENU           GPIO_INPUT_IO_3
+#define GPIO_LEFT           GPIO_INPUT_IO_1
+#define GPIO_RIGHT          GPIO_INPUT_IO_3
+#define GPIO_MENU           GPIO_INPUT_IO_2
 #define GPIO_BACK           GPIO_INPUT_IO_4
 //#define GPIO_UP             GPIO_INPUT_IO_1
 //#define GPIO_DOWN           GPIO_INPUT_IO_4
-#define GPIO_RIGHT          GPIO_INPUT_IO_2
-#define GPIO_LEFT           GPIO_INPUT_IO_1
 
 
 const char *TAG = "meteoCS";
 
 OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEATHER_HOUR_READ];
-static SemaphoreHandle_t semaphoreDisplayChange;
-static enum stateDisplay stateDis = stateWeather;
-static SemaphoreHandle_t semaphoreDisplayNextState;
+//static SemaphoreHandle_t semaphoreDisplayChange;
+//static enum stateDisplay stateDis = stateWeather;
+//static SemaphoreHandle_t semaphoreDisplayNextState;
 uint32_t periodChange = 30000;//NOTE configuraleble state or config individual stete for ever display
 double temp = 0.0, pressure = 0.0, humidity = 0.0;
 uint16_t co2Val;
@@ -88,50 +85,6 @@ int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
     }
 
     return ret;
-}
-
-void taskNextState(void *p)
-{
-//    uint32_t periodChange = *((uint32_t*)p);
-    vTaskDelay(1000);
-
-    while(1)
-    {
-        //wayt periodChange and chnage state or cahnge state by semaphore
-        xSemaphoreTake(semaphoreDisplayNextState, periodChange/portTICK_RATE_MS);
-
-        if(stateDis == stateMainForm)
-            stateDis = stateDipForm;
-        else if(stateDis == stateDipForm)
-            stateDis = stateDip2Form;
-        else if(stateDis == stateDip2Form)
-            stateDis = stateWeather;
-//        else if(stateDis == stateWeather)
-//            stateDis = stateWeatherTeat;
-
-//        else if(stateDis == stateWeather)
-//            stateDis = stateTest1;
-//        else if(stateDis == stateTest1)
-//            stateDis = stateTest2;
-//        else if(stateDis == stateTest2)
-//            stateDis = stateTest3;
-//        else if(stateDis == stateTest3)
-//            stateDis = stateTest4;
-//        else if(stateDis == stateTest4)
-//            stateDis = stateTestTiger;
-//        else if(stateDis == stateTestTiger)
-//            stateDis = stateTestNu0;
-//        else if(stateDis == stateTestNu0)
-//            stateDis = stateTestNu1;
-//        else if(stateDis == stateTestNu1)
-//            stateDis = stateTestNu2;
-//        else if(stateDis == stateTestNu2)
-//            stateDis = stateTestNu3;
-
-        else
-            stateDis = stateMainForm;
-        xSemaphoreGive(semaphoreDisplayChange);
-    }
 }
 
 void taskBME(void *p)
@@ -197,64 +150,68 @@ void taskBME(void *p)
 void taskDisplay(void *p)
 {
     (void)p;
-//    drawMainForm();
+////    drawMainForm();
 
 
-    ESP_LOGI(TAG, "BEGIN display");
+//    ESP_LOGI(TAG, "BEGIN display");
 
-//    char buff[100];
+////    char buff[100];
 
-    vTaskDelay(100/portTICK_RATE_MS);
+//    vTaskDelay(100/portTICK_RATE_MS);
 
-    drawWheather();
+//    drawWheather();
 
-//    setCO2(0);
-    vTaskDelay(1000/portTICK_RATE_MS);
+////    setCO2(0);
+//    vTaskDelay(1000/portTICK_RATE_MS);
 
     while(1)
     {
-        //wayt 3 seconds + while chnage states
-        if(xSemaphoreTake(semaphoreDisplayChange, 3000/portTICK_RATE_MS) == pdTRUE)
-        {
-            if(stateDis == stateMainForm)
-                drawMainForm();
-            else if(stateDis == stateDipForm)
-                drawDipForm();
-            else if(stateDis == stateDip2Form)
-                drawDip2Form();
-            else if(stateDis == stateWeatherTeat)
-                drawWheatherTest();
-            else if(stateDis == stateWeather)
-                drawWheather();
+//        //wayt 3 seconds + while chnage states
+//        if(xSemaphoreTake(semaphoreDisplayChange, 3000/portTICK_RATE_MS) == pdTRUE)
+//        {
+//            if(stateDis == stateMainForm)
+//                drawMainForm();
+//            else if(stateDis == stateDipForm)
+//                drawDipForm();
+//            else if(stateDis == stateDip2Form)
+//                drawDip2Form();
+//            else if(stateDis == stateWeatherTeat)
+//                drawWheatherTest();
+//            else if(stateDis == stateWeather)
+//                drawWheather();
 
-            else if(stateDis == stateTest1)
-                print_imTest1();
-            else if(stateDis == stateTest2)
-                print_imTest2();
-            else if(stateDis == stateTest3)
-                print_imTest3();
-            else if(stateDis == stateTest4)
-                print_imTest4();
-            else if(stateDis == stateTestTiger)
-                print_imTestTiger();
-            else if(stateDis == stateTestNu0)
-                print_imTestNy0();
-            else if(stateDis == stateTestNu1)
-                print_imTestNy1();
-            else if(stateDis == stateTestNu2)
-                print_imTestNy2();
-            else if(stateDis == stateTestNu3)
-                print_imTestNy3();
-        }
-//        vTaskDelay(1000/portTICK_RATE_MS);
+//            else if(stateDis == stateTest1)
+//                print_imTest1();
+//            else if(stateDis == stateTest2)
+//                print_imTest2();
+//            else if(stateDis == stateTest3)
+//                print_imTest3();
+//            else if(stateDis == stateTest4)
+//                print_imTest4();
+//            else if(stateDis == stateTestTiger)
+//                print_imTestTiger();
+//            else if(stateDis == stateTestNu0)
+//                print_imTestNy0();
+//            else if(stateDis == stateTestNu1)
+//                print_imTestNy1();
+//            else if(stateDis == stateTestNu2)
+//                print_imTestNy2();
+//            else if(stateDis == stateTestNu3)
+//                print_imTestNy3();
+//            else if(stateDis == stateTestG1)
+//                print_imTestG1();
+//            else if(stateDis == stateTestG2)
+//                print_imTestG2();
+//        }
+        vTaskDelay(1000/portTICK_RATE_MS);
         setHumiditi(humidity);
-        setTerm(temp);
-        setPa(pressure);
+        setTemperature(temp);
+        setPressure(pressure);
         setCO2(co2Val);
-        testMoon();
-        setWheather(&weatherCurent);
+//        testMoon();
+//        setWheather(&weatherCurent);
 
-//        vTaskDelay(5000/portTICK_RATE_MS);
+////        vTaskDelay(5000/portTICK_RATE_MS);
 
     }
 }
@@ -327,9 +284,9 @@ void taskButton(void *p)
     {
         vTaskDelay(50/portTICK_RATE_MS);
 
-        Bright = gpio_get_level(GPIO_RIGHT);
+        Bright = !gpio_get_level(GPIO_RIGHT);
         Bleft = gpio_get_level(GPIO_LEFT);
-        Bmenu = !gpio_get_level(GPIO_MENU);
+        Bmenu = gpio_get_level(GPIO_MENU);
         Bback = gpio_get_level(GPIO_BACK);
 
 
@@ -338,9 +295,10 @@ void taskButton(void *p)
             oldBleft = Bleft;
             ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
+            meteoButtonClicked(ButtonPrev, Bleft ? ButtonPresed : ButtonRealesed);
             if(!Bleft)
             {
-                xSemaphoreGive(semaphoreDisplayNextState);
+//                xSemaphoreGive(semaphoreDisplayNextState);
             }
         }
 
@@ -349,6 +307,7 @@ void taskButton(void *p)
             oldBright = Bright;
             ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
+            meteoButtonClicked(ButtonNext, Bright ? ButtonPresed : ButtonRealesed);
             if(!Bright)
             {
 //                if(stateDis == stateMainForm)
@@ -366,6 +325,7 @@ void taskButton(void *p)
             oldBmenu = Bmenu;
             ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
+            meteoButtonClicked(ButtonSettings, Bmenu ? ButtonPresed : ButtonRealesed);
 //            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bmenu ? 10.0 : 0.0);
         }
@@ -375,6 +335,7 @@ void taskButton(void *p)
             oldBback = Bback;
             ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
             gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
+            meteoButtonClicked(ButtonAction, Bback ? ButtonPresed : ButtonRealesed);
 //            gpio_set_level(GPIO_BUZZ_ON, Bback ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bback ? 10.0 : 0.0);
 
@@ -393,10 +354,10 @@ void task_co2(void *p)
 {
     (void)p;
     
-    gpio_set_level(GPIO_EN_CO2, 1);
+//    gpio_set_level(GPIO_EN_CO2, 1);
 
-    co2_init();
-    vTaskDelay(10000/portTICK_RATE_MS);
+//    co2_init();
+//    vTaskDelay(10000/portTICK_RATE_MS);
     
     
 
@@ -691,9 +652,15 @@ void app_main(void)
 
 
     s_wifi_event_group = xEventGroupCreate();
-    semaphoreDisplayChange = xSemaphoreCreateBinary();
-    semaphoreDisplayNextState = xSemaphoreCreateBinary();
-    initDisplay();
+//    semaphoreDisplayChange = xSemaphoreCreateBinary();
+//    semaphoreDisplayNextState = xSemaphoreCreateBinary();
+//    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
+    xTaskCreate(guiTask, "gui", 4096*2, NULL, 3, NULL);
+    ESP_LOGI("Dislay", "Drow display");
+
+    vTaskDelay(1000);
+    ESP_LOGI("Dislay", "Drow form");
+    drowDisplayLVGL();
 
 //    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
 //    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
@@ -714,14 +681,14 @@ void app_main(void)
 //    send_picturte(150, 100, 10, 10, pixelRead);
 //    ESP_LOGI(TAG, "Write display OK");
 
-    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
-    xTaskCreate(taskDisplay, "Display", 2048, NULL, 3, NULL);
+//    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
+    xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
+//    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
     xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
-    xTaskCreate(taskNextState, "ChangeD", 512, NULL, 2, NULL);
+//    xTaskCreate(taskNextState, "ChangeD", 512, NULL, 2, NULL);
 
 
 

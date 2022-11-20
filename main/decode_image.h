@@ -66,16 +66,16 @@
 #define IM_TEST_NU3_W 135
 #define IM_TEST_NU3_H 120
 
-typedef enum{
-	imager,
-	hum0,
-	hum1,
-	temp0,
-	temp1,
-    CO2,
+#define IM_TEST_GROUP_W 160
+#define IM_TEST_GROUP_H 120
 
-    Im1,
-    Im2,
+typedef enum{
+//	imager,
+//	hum0,
+//	hum1,
+//	temp0,
+//	temp1,
+//    CO2,
 
     WindE,
     WindN,
@@ -142,61 +142,6 @@ typedef enum{
     Moon_L21,
     Moon_L22,
     Moon_L23,
-
-    //test
-    ImTest1,
-    ImTest1_001,
-    ImTest1_002,
-    ImTest1_003,
-    ImTest1_004,
-
-    ImTest2,
-    ImTest2_001,
-    ImTest2_002,
-    ImTest2_003,
-    ImTest2_004,
-
-    ImTest3,
-    ImTest3_001,
-    ImTest3_002,
-    ImTest3_003,
-    ImTest3_004,
-
-    ImTest4,
-    ImTest4_001,
-    ImTest4_002,
-    ImTest4_003,
-    ImTest4_004,
-
-    ImTestTiger,
-    ImTestTiger_001,
-    ImTestTiger_002,
-    ImTestTiger_003,
-    ImTestTiger_004,
-
-    ImTestNy0,
-    ImTestNy0_001,
-    ImTestNy0_002,
-    ImTestNy0_003,
-    ImTestNy0_004,
-
-    ImTestNy1,
-    ImTestNy1_001,
-    ImTestNy1_002,
-    ImTestNy1_003,
-    ImTestNy1_004,
-
-    ImTestNy2,
-    ImTestNy2_001,
-    ImTestNy2_002,
-    ImTestNy2_003,
-    ImTestNy2_004,
-
-    ImTestNy3,
-    ImTestNy3_001,
-    ImTestNy3_002,
-    ImTestNy3_003,
-    ImTestNy3_004,
 }Image;
 
 
