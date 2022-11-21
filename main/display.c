@@ -45,13 +45,16 @@ esp_timer_handle_t periodic_timer;
 
 void guiTask(void *pvParameter)
 {
-
-    (void) pvParameter;
+    void (*application)(void);
+    application = pvParameter;
     initDisplay();
     /* Create the demo application */
 //    create_demo_application();//show log
 
-    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    if(pvParameter != NULL)
+        application();
+//    vTaskDelay(pdMS_TO_TICKS(1000));
 
     while (1) {
         /* Delay 1 tick (assumes FreeRTOS tick is 10ms */

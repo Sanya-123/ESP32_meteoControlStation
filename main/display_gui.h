@@ -1,5 +1,5 @@
 /**
- * @file lv_demo_meteo.h
+ * @file display_gui.h
  *
  */
 
@@ -17,6 +17,8 @@ extern "C" {
 /*********************
  *      DEFINES
  *********************/
+#define MIN_TIME_ON_DISPLAY     1
+#define MAX_TIME_ON_DISPLAY     200
 
 /**********************
  *      TYPEDEFS
@@ -50,6 +52,8 @@ void setCO2(int val);
 void setHumiditi(int val);
 void setTemperature(int val);
 void setPressure(int val);
+void setTime(int h, int m);
+void setDate(int d, int m, int y);
 
 /**********************
  *      MACROS

@@ -655,12 +655,10 @@ void app_main(void)
 //    semaphoreDisplayChange = xSemaphoreCreateBinary();
 //    semaphoreDisplayNextState = xSemaphoreCreateBinary();
 //    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
-    xTaskCreate(guiTask, "gui", 4096*2, NULL, 3, NULL);
+    xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 3, NULL);
     ESP_LOGI("Dislay", "Drow display");
 
     vTaskDelay(1000);
-    ESP_LOGI("Dislay", "Drow form");
-    drowDisplayLVGL();
 
 //    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
 //    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());

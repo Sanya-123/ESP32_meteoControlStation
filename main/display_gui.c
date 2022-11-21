@@ -1,5 +1,5 @@
 /**
- * @file lv_demo_meteo.c
+ * @file display_gui.c
  *
  */
 
@@ -32,6 +32,9 @@
 #define BIG_RECT_HEIGHT     140
 #define BIG_RECT_WIDTH      210
 
+#define SITING_LIST_SIZE        6
+#define DISPLAY_SIZE            3
+
 /**********************
  *      TYPEDEFS
  **********************/
@@ -46,6 +49,7 @@ static void btnCtrl_event_cb(lv_event_t * e);//button conf
 static void btnAction_event_cb(lv_event_t * e);//button action
 static void timer_event_cb(lv_timer_t * timer);
 static void mainPage_create(lv_obj_t * parent);
+static void mainPage2_create(lv_obj_t * parent);
 
 static void settingPage_create(lv_obj_t * parent);
 static void color_changer_create(lv_obj_t * parent);
@@ -58,9 +62,10 @@ static lv_indev_t *indev;
 static lv_indev_drv_t indev_drv;
 static Button buttonChange = NoneButton;
 static ButtonState buttonState = ButtonRealesed;
+//static ButtonState buttonState[ButtonNext + 1] = {ButtonRealesed};
 
 static DisplayState stateDisplay = StateMainDisplay;
-uint32_t timeOnDisplay[3] = {3000, 1000, 1000};//time state on display
+uint32_t timeOnDisplay[DISPLAY_SIZE] = {3, 3, 1};//time state on display [s]
 
 static lv_obj_t * buttonLeft, * buttonRight, * buttonSettings, * buttonAction;
 static lv_obj_t * labelLeft, * labelRight, * labelSettings, * labelAction;
@@ -82,13 +87,31 @@ static lv_style_t styleDisplayMain;
 static lv_obj_t * labelTime, * labelDate;
 //static lv_style_t styleTime, styleDate;
 
+//second display
+static lv_obj_t * displayMain2;
+static lv_obj_t * co2Obj2, * humidityObj2, * temperatureObj2, * pressureObj2, * timeDateObj2;
+static lv_obj_t * labelCo22, * labelHumidity2, * labelTemperatre2, * labelPressure2;
+static lv_obj_t * labelCo2ppm2, * labelCo2co22;
+static lv_style_t styleDisplayMain2;
+static lv_obj_t * labelTime2, * labelDate2;
+
 //sitings display
 static lv_obj_t * displaySettings;
 static lv_obj_t * switchTimerEn;
+static lv_obj_t * switchPressure;//hPa <-> mmHg
+static lv_group_t * settingFocuse;
+static lv_obj_t * btnColorSelect;
+bool stateConfigValue = false;//state load int value of settings
+bool selectColorState = false;
+static lv_obj_t * labelTimeDisplay[DISPLAY_SIZE] = {NULL};
+int currentLabelTimeDisplay = -1;
+//bool pressurePring = false;//0 - hPa;1 - mmHg
 
-static int indexSelectedSettings = 0;
-static lv_obj_t * selectedSetings;//curent select sitings in listSetings
-static lv_obj_t *listSetings[1] = {/*switchTimerEn*/};
+static lv_group_t * colorFocuse;
+
+//static int indexSelectedSettings = 0;
+//static lv_obj_t * selectedSetings;//curent select sitings in listSetings
+static lv_obj_t * listSetings[SITING_LIST_SIZE] = {NULL/*switchTimerEn*/};
 
 
 /**********************
@@ -152,6 +175,7 @@ void drowDisplayLVGL(void)
     //border style
     lv_style_set_border_width(&styleButtons, BORDER_BUTTONS);
     lv_style_set_border_side(&styleButtons, LV_BORDER_SIDE_TOP | LV_BORDER_SIDE_RIGHT);
+    lv_style_set_border_color(&styleButtons, (lv_color_t)LV_COLOR_MAKE(0xFF, 0xFF, 0xFF));
 
 //    lv_style_init(&styleButtonRight);
 //    lv_style_set_text_color(&styleButtonRight, (lv_color_t)LV_COLOR_MAKE(0xFF, 0xFF, 0xFF));
@@ -188,22 +212,28 @@ void drowDisplayLVGL(void)
 
     lv_obj_add_event_cb(buttonLeft, btnSide_event_cb, LV_EVENT_ALL, &typeLeft);
     lv_obj_add_event_cb(buttonRight, btnSide_event_cb, LV_EVENT_ALL, &typeRight);
-    lv_obj_add_event_cb(buttonSettings, btnCtrl_event_cb, LV_EVENT_ALL, &typeRight);
+    lv_obj_add_event_cb(buttonSettings, btnCtrl_event_cb, LV_EVENT_ALL, NULL);
+    lv_obj_add_event_cb(buttonAction, btnAction_event_cb, LV_EVENT_ALL, NULL);
 
     //windows
-    /*Tile1: just a label*/
+    /*main display*/
     displayMain = lv_tileview_add_tile(tl, StateMainDisplay, 0, LV_DIR_RIGHT);
     mainPage_create(displayMain);
+
+    displayMain2 = lv_tileview_add_tile(tl, StateExternalData, 0, LV_DIR_RIGHT);
+    mainPage2_create(displayMain2);
 
 
     //setings page
     displaySettings = lv_tileview_add_tile(tl, 0, 1, LV_DIR_NONE);
     settingPage_create(displaySettings);
-    /*Tile1: just a label*/
-    lv_obj_t * tile2 = lv_tileview_add_tile(tl, StateExternalData, 0, LV_DIR_HOR);
-    lv_obj_t * label2 = lv_label_create(tile2);
-    lv_label_set_text(label2, "Scroll RIGHT | LEFT");
-    lv_obj_center(label2);
+
+
+//    /*Tile1: just a label*/
+//    lv_obj_t * tile2 = lv_tileview_add_tile(tl, StateExternalData, 0, LV_DIR_HOR);
+//    lv_obj_t * label2 = lv_label_create(tile2);
+//    lv_label_set_text(label2, "Scroll RIGHT | LEFT");
+//    lv_obj_center(label2);
 
     /*Tile1: just a label*/
     lv_obj_t * tile3 = lv_tileview_add_tile(tl, StateWheather, 0, LV_DIR_LEFT);
@@ -242,12 +272,14 @@ void drowDisplayLVGL(void)
     // color_changer_create(tv);
 
     //create timer for change display
-    timerNextDisplay = lv_timer_create(timer_event_cb, timeOnDisplay[0], NULL);
-    lv_timer_pause(timerNextDisplay);//TODO temp
+    timerNextDisplay = lv_timer_create(timer_event_cb, timeOnDisplay[0]*1000, NULL);
+//    lv_timer_pause(timerNextDisplay);//TODO temp
 }
 
 void meteoButtonClicked(Button button, ButtonState state)
 {
+//    if(button <= ButtonNext)
+//        buttonState[button] = state;
     buttonChange = button;
     buttonState = state;
 }
@@ -255,21 +287,53 @@ void meteoButtonClicked(Button button, ButtonState state)
 void setCO2(int val)
 {
     lv_label_set_text_fmt(labelCo2, "%d ppm", val);
+
+    lv_label_set_text_fmt(labelCo22, "%d", val);
+    lv_obj_align_to(labelCo2co22, labelCo22, LV_ALIGN_OUT_LEFT_BOTTOM, -5, -6);
+    lv_obj_align_to(labelCo2ppm2, labelCo22, LV_ALIGN_OUT_RIGHT_BOTTOM, +3, -6);
 }
 
 void setHumiditi(int val)
 {
     lv_label_set_text_fmt(labelHumidity, "%d%%", val);
+
+    lv_label_set_text_fmt(labelHumidity2, "H %d %%", val);
 }
 
 void setTemperature(int val)
 {
     lv_label_set_text_fmt(labelTemperatre, "%d C", val);
+
+    lv_label_set_text_fmt(labelTemperatre2, "t %3d C", val);
 }
 
 void setPressure(int val)
 {
-    lv_label_set_text_fmt(labelPressure, "%d hPa", val);
+    //if value is -1 so i need just update hPa <-> nnHg
+    static int oldVal = 1045;
+    if(val == -1)
+        val = oldVal;
+    int printVal = lv_obj_has_state(switchPressure, LV_STATE_CHECKED) ? val*0.750062 : val;
+    lv_label_set_text_fmt(labelPressure, "%d %s", printVal, lv_obj_has_state(switchPressure, LV_STATE_CHECKED) ? "mmHg" : "hPa");
+
+    lv_label_set_text_fmt(labelPressure2, "p %d %s", printVal, lv_obj_has_state(switchPressure, LV_STATE_CHECKED) ? "mmHg" : "hPa");
+
+    oldVal = val;
+}
+
+void setTime(int h, int m)
+{
+    lv_label_set_text_fmt(labelTime, "%d:%d", h, m);
+
+    lv_label_set_text_fmt(labelTime2, "%d:%d", h, m);
+}
+
+void setDate(int d, int m, int y)
+{
+    lv_label_set_text_fmt(labelDate, "%d.%d.%d", d, m, y);
+
+    static const char * month_names_def[12] = LV_CALENDAR_DEFAULT_MONTH_NAMES;
+    lv_label_set_text_fmt(labelDate2, "%d %s %d", d, month_names_def[m], y);
 }
 
 DisplayState getDisplay(bool next)//get statte after current
@@ -301,9 +365,22 @@ DisplayState getDisplay(bool next)//get statte after current
 static void readKeyButton(struct _lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
 {
     (void)indev_drv;
+
+//    static int i = 0;
+
+//    data->continue_reading = i < ButtonNext;
+//    data->btn_id = i;
+//    data->state = buttonState[i] == ButtonPresed ? LV_INDEV_STATE_PR : LV_INDEV_STATE_REL;
+
+
+//    if(i == ButtonNext)
+//        i = 0;
+//    else
+//        i++;
+
+
     static Button last_btn = NoneButton;     /* Store the last pressed button */
     static ButtonState lastState = ButtonRealesed;
-
 
     if(buttonChange != NoneButton)
     {
@@ -337,14 +414,54 @@ static void btnSide_event_cb(lv_event_t * e)
         {
             stateDisplay = getDisplay(typeBytton == 0);
 
-            lv_timer_set_period(timerNextDisplay, timeOnDisplay[stateDisplay]);//set period display
+            lv_timer_set_period(timerNextDisplay, timeOnDisplay[stateDisplay]*1000);//set period display
             lv_timer_reset(timerNextDisplay);//reset count timer
             lv_obj_set_tile_id(tl, stateDisplay, 0, LV_ANIM_ON);//set display
         }
     }
     else
     {
+            if(stateConfigValue == false)
+            {
+                if(code == LV_EVENT_CLICKED)
+                {
+                    if(typeBytton == 0)
+                        lv_group_focus_next(settingFocuse);
+                    else
+                        lv_group_focus_prev(settingFocuse);
+                }
+            }
+            else
+            {
+                if(code == LV_EVENT_CLICKED || code == LV_EVENT_LONG_PRESSED_REPEAT)
+                {
+                //get selected object
+//                lv_obj_t *curentSetting = lv_group_get_focused(settingFocuse);
+                //seting value of object
+                    if(selectColorState)
+                    {
+                        if(typeBytton == 0)
+                            lv_group_focus_next(colorFocuse);
+                        else
+                            lv_group_focus_prev(colorFocuse);
+                    }
+                    else if(currentLabelTimeDisplay >= 0)
+                    {
+                        if(typeBytton == 0)
+                            timeOnDisplay[currentLabelTimeDisplay]++;
+                        else
+                            timeOnDisplay[currentLabelTimeDisplay]--;
 
+                        //check value
+                        if(timeOnDisplay[currentLabelTimeDisplay] < MIN_TIME_ON_DISPLAY)
+                            timeOnDisplay[currentLabelTimeDisplay] = MIN_TIME_ON_DISPLAY;
+                        if(timeOnDisplay[currentLabelTimeDisplay] > MAX_TIME_ON_DISPLAY)
+                            timeOnDisplay[currentLabelTimeDisplay] = MAX_TIME_ON_DISPLAY;
+
+                        lv_label_set_text_fmt(labelTimeDisplay[currentLabelTimeDisplay], "%d", timeOnDisplay[currentLabelTimeDisplay]);
+                    }
+                }
+            }
     }
 }
 
@@ -362,39 +479,105 @@ static void btnCtrl_event_cb(lv_event_t * e)
             stateDisplay = StateSetings;
             lv_obj_set_tile_id(tl, 0, 1, LV_ANIM_ON);//set display
             lv_timer_pause(timerNextDisplay);
+
+            lv_label_set_text(labelSettings, "disp");
         }
     }
     else
     {
         if(code == LV_EVENT_CLICKED)
         {
-            stateDisplay = oldState;
+//            if(stateConfigValue)
+//            {
 
-            //set privius state and continiu timer
-            lv_timer_resume(timerNextDisplay);
-            lv_timer_reset(timerNextDisplay);
+//            }
+//            else
+//            {
+                stateDisplay = oldState;
 
-            lv_timer_set_period(timerNextDisplay, timeOnDisplay[stateDisplay]);//set period display
-            lv_obj_set_tile_id(tl, stateDisplay, 0, LV_ANIM_ON);//set display
+                //set privius state and continiu timer
+                lv_timer_resume(timerNextDisplay);
+                lv_timer_reset(timerNextDisplay);
+
+                lv_timer_set_period(timerNextDisplay, timeOnDisplay[stateDisplay]*1000);//set period display
+                lv_obj_set_tile_id(tl, stateDisplay, 0, LV_ANIM_ON);//set display
+
+                lv_label_set_text(labelSettings, "conf");
+//            }
         }
-
     }
 }
 
 static void btnAction_event_cb(lv_event_t * e)
 {
     lv_event_code_t code = lv_event_get_code(e);
+
+    if((stateDisplay == StateSetings) && (code == LV_EVENT_CLICKED))
+    {
+        //get selected object
+        lv_obj_t *curentSetting = lv_group_get_focused(settingFocuse);
+
+        if(/*curentSetting == switchTimerEn*/lv_obj_check_type(curentSetting, &lv_switch_class))
+        {
+            if(lv_obj_has_state(curentSetting, LV_STATE_CHECKED))
+                lv_obj_clear_state(curentSetting, LV_STATE_CHECKED);
+            else
+                lv_obj_add_state(curentSetting, LV_STATE_CHECKED);
+            lv_event_send(curentSetting, LV_EVENT_VALUE_CHANGED, NULL);
+        }
+        else if(lv_obj_check_type(curentSetting, &lv_label_class))
+        {
+            stateConfigValue = !stateConfigValue;
+            if(stateConfigValue)
+            {
+                for(int i = 0; i < DISPLAY_SIZE; i++)
+                {
+                    if(curentSetting == labelTimeDisplay[i])
+                    {
+                        currentLabelTimeDisplay = i;
+                        break;
+                    }
+                }
+//                //change label value
+//                lv_obj_t * labelButtons;
+//                labelButtons = lv_obj_get_child(buttonLeft, 0);
+//                lv_label_set_text(labelButtons, "-");
+                lv_label_set_text(labelLeft, "-");
+                lv_label_set_text(labelRight, "+");
+                lv_label_set_text(labelAction, "OK");
+                lv_obj_add_state(buttonSettings, LV_STATE_DISABLED);
+            }
+            else
+            {
+                currentLabelTimeDisplay = -1;
+                lv_label_set_text(labelLeft, "<");
+                lv_label_set_text(labelRight, ">");
+                lv_label_set_text(labelAction, "act");
+                lv_obj_clear_state(buttonSettings, LV_STATE_DISABLED);
+            }
+        }
+        else if(curentSetting == btnColorSelect)
+        {
+            stateConfigValue = !stateConfigValue;
+            selectColorState = stateConfigValue;
+            lv_event_send(btnColorSelect, LV_EVENT_CLICKED, NULL);
+            if(stateConfigValue)
+            {
+                lv_label_set_text(labelAction, "OK");
+                lv_obj_add_state(buttonSettings, LV_STATE_DISABLED);
+            }
+            else
+            {
+                lv_label_set_text(labelAction, "act");
+                lv_obj_clear_state(buttonSettings, LV_STATE_DISABLED);
+            }
+        }
+    }
 }
 
 static void timer_event_cb(lv_timer_t * timer)
 {
     (void)timer;
-//    static int time = 0;
-//    time++;
-//    if(time == 5001)
-//        time = 700;
-//    lv_label_set_text_fmt(labelCo2, "%d ppm", time);
-
 //    if(time % 2)
 //    {
 //        meteoButtonClicked(ButtonNext, ButtonPresed);
@@ -421,6 +604,23 @@ static void switchTimer_event_cb(lv_event_t * e)
         lv_timer_set_cb(timerNextDisplay, NULL);
 //        lv_timer_enable(false);//TODO only for 1 timer
     }
+}
+
+static void switchPressure_event_cb(lv_event_t * e)
+{//TODO change curent value
+//    lv_obj_t * sw = lv_event_get_target(e);
+
+//    pressurePring = lv_obj_has_state(sw, LV_STATE_CHECKED);
+    setPressure(-1);
+
+//    if(lv_obj_has_state(sw, LV_STATE_CHECKED))
+//    {
+////        strlen lv_label_get_text()
+//    }
+//    else
+//    {
+
+//    }
 }
 
 static void mainPage_create(lv_obj_t * parent)
@@ -468,11 +668,6 @@ static void mainPage_create(lv_obj_t * parent)
     lv_obj_set_pos(temperatureObj, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT);
     lv_obj_set_pos(pressureObj, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT*2);
 
-    lv_obj_center(labelCo2);
-    lv_obj_center(labelHumidity);
-    lv_obj_center(labelTemperatre);
-    lv_obj_center(labelPressure);
-
     labelTime = lv_label_create(parent);
     lv_obj_set_style_text_font(labelTime, &lv_font_montserrat_40, 0);
     lv_obj_set_pos(labelTime, 2, 15);
@@ -487,29 +682,211 @@ static void mainPage_create(lv_obj_t * parent)
     lv_label_set_text(labelHumidity, "100%");
     lv_label_set_text(labelTemperatre, "45 C");
     lv_label_set_text(labelPressure, "1045 hPa");
+
+//    lv_obj_set_style_text_font(labelPressure, &lv_font_montserrat_14, 0);
+
+    lv_obj_remove_style(pressureObj, NULL, LV_PART_SCROLLBAR);
+//    lv_obj_set_scrollbar_mode(pressureObj, LV_SCROLLBAR_MODE_OFF);
+
+    lv_obj_center(labelCo2);
+    lv_obj_center(labelHumidity);
+    lv_obj_center(labelTemperatre);
+    lv_obj_center(labelPressure);
 }
+
+static void mainPage2_create(lv_obj_t * parent)
+{
+    lv_style_init(&styleDisplayMain2);
+    lv_style_set_text_color(&styleDisplayMain2, (lv_color_t)LV_COLOR_MAKE(0x00, 0x00, 0x00));
+    lv_style_set_text_font(&styleDisplayMain2, fontData);
+    lv_style_set_radius(&styleDisplayMain2, 0);
+    lv_style_set_border_width(&styleDisplayMain2, 3);
+    lv_style_set_border_color(&styleDisplayMain2, (lv_color_t)LV_COLOR_MAKE(0xFF, 0xFF, 0xFF));
+
+    co2Obj2 = lv_obj_create(parent);
+    humidityObj2 = lv_obj_create(parent);
+    temperatureObj2 = lv_obj_create(parent);
+    pressureObj2 = lv_obj_create(parent);
+    timeDateObj2 = lv_obj_create(parent);
+
+    lv_obj_add_style(co2Obj2, &styleDisplayMain2, 0);
+    lv_obj_add_style(humidityObj2, &styleDisplayMain2, 0);
+    lv_obj_add_style(temperatureObj2, &styleDisplayMain2, 0);
+    lv_obj_add_style(pressureObj2, &styleDisplayMain2, 0);
+    lv_obj_add_style(timeDateObj2, &styleDisplayMain2, 0);
+
+    labelCo22 = lv_label_create(co2Obj2);
+    labelHumidity2 = lv_label_create(humidityObj2);
+    labelTemperatre2 = lv_label_create(temperatureObj2);
+    labelPressure2 = lv_label_create(pressureObj2);
+
+//    lv_palette_lighten()
+    lv_obj_set_style_bg_color(co2Obj2, (lv_color_t)LV_COLOR_MAKE(0xFB, 0xDD, 0xDD), 0);
+    lv_obj_set_style_bg_color(humidityObj2, (lv_color_t)LV_COLOR_MAKE(0xD5, 0xE6, 0xFB), 0);
+    lv_obj_set_style_bg_color(temperatureObj2, (lv_color_t)LV_COLOR_MAKE(0xEB, 0xDC, 0xF9), 0);
+    lv_obj_set_style_bg_color(pressureObj2, (lv_color_t)LV_COLOR_MAKE(0xFC, 0xEB, 0xDB), 0);
+    lv_obj_set_style_bg_color(timeDateObj2, (lv_color_t)LV_COLOR_MAKE(0xD3, 0xEA, 0xDD), 0);
+
+    lv_obj_set_style_border_side(co2Obj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
+    lv_obj_set_style_border_side(timeDateObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
+    lv_obj_set_style_border_side(humidityObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+    lv_obj_set_style_border_side(temperatureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+    lv_obj_set_style_border_side(pressureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+
+    lv_obj_set_size(co2Obj2, BIG_RECT_WIDTH, BIG_RECT_HEIGHT);
+    lv_obj_set_size(humidityObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
+    lv_obj_set_size(temperatureObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
+    lv_obj_set_size(pressureObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
+    lv_obj_set_size(timeDateObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT);
+
+    lv_obj_set_pos(co2Obj2, 0, SMALL_RECT_HEIGHT);
+    lv_obj_set_pos(humidityObj2, BIG_RECT_WIDTH, 0);
+    lv_obj_set_pos(temperatureObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT);
+    lv_obj_set_pos(pressureObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT*2);
+    lv_obj_set_pos(timeDateObj2, 0, 0);
+
+    labelTime2 = lv_label_create(timeDateObj2);
+    lv_obj_set_style_text_font(labelTime2, &lv_font_montserrat_22, 0);
+    lv_obj_set_pos(labelTime2, 0, 10);
+    lv_label_set_text(labelTime2, "20:47");
+
+    labelDate2 = lv_label_create(timeDateObj2);
+    lv_obj_set_style_text_font(labelDate2, &lv_font_montserrat_12, 0);
+    lv_obj_set_pos(labelDate2, 65, 20);
+    lv_label_set_text(labelDate2, "23 november 2022");
+
+    lv_label_set_text(labelCo22, "5000");
+    lv_label_set_text(labelHumidity2, "H 100 %");
+    lv_label_set_text(labelTemperatre2, "t  45 C");
+    lv_label_set_text(labelPressure2, "p 1045 hPa");
+
+    lv_obj_set_style_text_font(labelCo22, &lv_font_montserrat_40, 0);
+    lv_obj_set_style_text_font(labelPressure2, &lv_font_montserrat_12, 0);
+    lv_obj_remove_style(pressureObj2, NULL, LV_PART_SCROLLBAR);
+
+    labelCo2co22 = lv_label_create(co2Obj2);
+    lv_obj_set_style_text_font(labelCo2co22, &lv_font_montserrat_12, 0);
+    lv_label_set_text(labelCo2co22, "CO2");
+
+    labelCo2ppm2 = lv_label_create(co2Obj2);
+    lv_obj_set_style_text_font(labelCo2ppm2, &lv_font_montserrat_12, 0);
+    lv_label_set_text(labelCo2ppm2, "ppm");
+
+    lv_obj_center(labelCo22);
+    lv_obj_center(labelHumidity2);
+    lv_obj_center(labelTemperatre2);
+    lv_obj_center(labelPressure2);
+
+    lv_obj_align_to(labelCo2co22, labelCo22, LV_ALIGN_OUT_LEFT_BOTTOM, -5, -6);
+    lv_obj_align_to(labelCo2ppm2, labelCo22, LV_ALIGN_OUT_RIGHT_BOTTOM, +3, -6);
+}
+
+static void focusChange_event_cb(lv_event_t * e)
+{//change selected settings
+    lv_event_code_t code = lv_event_get_code(e);
+    lv_obj_t * obj = lv_event_get_target(e);
+//    lv_obj_set_style_outline_color(switchTimerEn, lv_theme_get_color_primary(obj), 0);
+    switch (code)
+    {
+    case LV_EVENT_FOCUSED:
+        lv_obj_set_style_outline_width(obj, 2, 0);
+        break;
+    case LV_EVENT_DEFOCUSED:
+        lv_obj_set_style_outline_width(obj, 0, 0);
+        break;
+    default:
+        break;
+    }
+}
+
+#define CREATE_LABEL_TIME(y)            do{ label = lv_label_create(parent);    \
+                                            lv_obj_set_pos(label, y, 70);      \
+                                            lv_obj_set_style_text_font(label, &lv_font_montserrat_30, 0);   \
+                                            lv_label_set_text_fmt(label, "%d", MAX_TIME_ON_DISPLAY);}while(0);
 
 static void settingPage_create(lv_obj_t * parent)
 {
+    //create groub settings
+    settingFocuse = lv_group_create();
+
+    //create widget select object
     color_changer_create(parent);
 
     //crate checkbox eneble timer switch
     switchTimerEn = lv_switch_create(parent);
-    lv_obj_set_pos(switchTimerEn, 15, 10);
+    lv_obj_set_pos(switchTimerEn, 20, 10);
     lv_obj_add_state(switchTimerEn, LV_STATE_CHECKED);
     lv_obj_add_event_cb(switchTimerEn, switchTimer_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    listSetings[0] = switchTimerEn;
+
+    switchPressure = lv_switch_create(parent);
+    lv_obj_set_pos(switchPressure, 140, 10);
+    lv_obj_add_event_cb(switchPressure, switchPressure_event_cb, LV_EVENT_VALUE_CHANGED, NULL);
+    listSetings[1] = switchPressure;
+
+    //create label values
+    lv_obj_t * label;
+    CREATE_LABEL_TIME(80);
+    listSetings[2] = labelTimeDisplay[0] = label;
+    CREATE_LABEL_TIME(170);
+    listSetings[3] = labelTimeDisplay[1] = label;
+    CREATE_LABEL_TIME(245);
+    listSetings[4] = labelTimeDisplay[2] = label;
+
+
+
+//    lv_group_set_default(settingFocuse);
+
+    listSetings[5] = btnColorSelect;
+
+
+    for(int i = 0; i < SITING_LIST_SIZE; i++)
+    {
+        if(listSetings[i] == NULL)
+            continue;
+        lv_obj_set_style_outline_color(listSetings[i], lv_theme_get_color_primary(NULL), 0);
+        lv_obj_set_style_outline_pad(listSetings[i], 2, 0);
+        lv_obj_add_event_cb(listSetings[i], focusChange_event_cb, LV_EVENT_FOCUSED, NULL);
+        lv_obj_add_event_cb(listSetings[i], focusChange_event_cb, LV_EVENT_DEFOCUSED, NULL);
+
+        lv_group_add_obj(settingFocuse, listSetings[i]);
+    }
 
 
 //    switchTimerEn
-    lv_obj_t * label = lv_label_create(parent);
-    lv_obj_set_pos(label, 2, 40);
+    //help label
+    label = lv_label_create(parent);
     lv_label_set_text(label, "Auto switch");
-//    lv_obj_align_to();
+    lv_obj_align_to(label, switchTimerEn, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
 
-    //swelect object TODO check onouther way
-    lv_obj_set_style_outline_width(switchTimerEn, 2, 0);
-    lv_obj_set_style_outline_color(switchTimerEn, lv_theme_get_color_primary(parent), 0);
-    lv_obj_set_style_outline_pad(switchTimerEn, 2, 0);
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "hPa|mmHg");
+    lv_obj_align_to(label, switchPressure, LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
+
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "Time:");
+    lv_obj_align_to(label, labelTimeDisplay[0], LV_ALIGN_OUT_LEFT_MID, -20, 0);//align position
+
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "Main display");
+    lv_obj_align_to(label, labelTimeDisplay[0], LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
+
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "Display 1");
+    lv_obj_align_to(label, labelTimeDisplay[1], LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
+
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "Display 2");
+    lv_obj_align_to(label, labelTimeDisplay[2], LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
+
+    for(int i = 0 ; i < DISPLAY_SIZE; i++)
+        lv_label_set_text_fmt(labelTimeDisplay[i], "%d", timeOnDisplay[i]);
+
+
+//    //swelect object TODO check onouther way
+//    lv_obj_set_style_outline_width(switchTimerEn, 2, 0);
+//    lv_obj_set_style_outline_color(switchTimerEn, lv_theme_get_color_primary(parent), 0);
+//    lv_obj_set_style_outline_pad(switchTimerEn, 2, 0);
 }
 
 static void color_changer_anim_cb(void * var, int32_t v)
@@ -561,19 +938,13 @@ static void color_event_cb(lv_event_t * e)
     lv_event_code_t code = lv_event_get_code(e);
     lv_obj_t * obj = lv_event_get_target(e);
 
-    if(code == LV_EVENT_FOCUSED) {
-        lv_obj_t * color_cont = lv_obj_get_parent(obj);
-        if(lv_obj_get_width(color_cont) < LV_HOR_RES / 2) {
-            lv_anim_t a;
-            lv_anim_init(&a);
-            lv_anim_set_var(&a, color_cont);
-            lv_anim_set_exec_cb(&a, color_changer_anim_cb);
-            lv_anim_set_values(&a, 0, 256);
-            lv_anim_set_time(&a, 200);
-            lv_anim_start(&a);
-        }
+    if(code == LV_EVENT_DEFOCUSED)
+    {
+        lv_obj_set_style_outline_width(obj, 0, 0);
     }
-    else if(code == LV_EVENT_CLICKED) {
+    else if(code == LV_EVENT_FOCUSED) {
+        lv_obj_set_style_outline_width(obj, 2, 0);
+
         lv_palette_t * palette_primary = lv_event_get_user_data(e);
         lv_palette_t palette_secondary = (*palette_primary) + 3; /*Use another palette as secondary*/
         if(palette_secondary >= _LV_PALETTE_LAST) palette_secondary = 0;
@@ -581,10 +952,12 @@ static void color_event_cb(lv_event_t * e)
         lv_theme_default_init(NULL, lv_palette_main(*palette_primary), lv_palette_main(palette_secondary),
                               LV_THEME_DEFAULT_DARK, fontMain);
 #endif
-//        lv_color_t color = lv_palette_main(*palette_primary);
-//        lv_style_set_text_color(&style_icon, color);
-//        lv_chart_set_series_color(chart1, ser1, color);
-//        lv_chart_set_series_color(chart2, ser3, color);
+        for(int i = 0; i < SITING_LIST_SIZE; i++)
+        {
+            if(listSetings[i] == NULL)
+                continue;
+            lv_obj_set_style_outline_color(listSetings[i], lv_theme_get_color_primary(NULL), 0);
+        }
     }
 }
 
@@ -594,6 +967,9 @@ static void color_changer_create(lv_obj_t * parent)
         LV_PALETTE_BLUE, LV_PALETTE_GREEN, LV_PALETTE_BLUE_GREY,  LV_PALETTE_ORANGE,
         LV_PALETTE_RED, LV_PALETTE_PURPLE, LV_PALETTE_TEAL, _LV_PALETTE_LAST
     };
+
+    //create select group
+    colorFocuse = lv_group_create();
 
     lv_obj_t * color_cont = lv_obj_create(parent);
     lv_obj_remove_style_all(color_cont);
@@ -619,9 +995,14 @@ static void color_changer_create(lv_obj_t * parent)
         lv_obj_set_size(c, 20, 20);
         lv_obj_add_event_cb(c, color_event_cb, LV_EVENT_ALL, &palette[i]);
         lv_obj_clear_flag(c, LV_OBJ_FLAG_SCROLL_ON_FOCUS);
+
+        lv_obj_set_style_outline_color(c, lv_palette_main(palette[i]), 0);
+        lv_obj_set_style_outline_pad(c, 2, 0);
+        lv_group_add_obj(colorFocuse, c);
     }
 
-    lv_obj_t * btn = lv_btn_create(parent);
+    btnColorSelect = lv_btn_create(parent);
+    lv_obj_t * btn = btnColorSelect;
     lv_obj_add_flag(btn, LV_OBJ_FLAG_FLOATING | LV_OBJ_FLAG_CLICKABLE);
     lv_obj_set_style_bg_color(btn, lv_color_white(), LV_STATE_CHECKED);
     lv_obj_set_style_pad_all(btn, 10, 0);
