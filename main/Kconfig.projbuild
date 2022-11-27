@@ -33,5 +33,22 @@ menu "control stationconfig"
         default ""
         help
             Enter key for Open wheather; get from https://openweathermap.org/price
+            
+    config ESP_DPP_LISTEN_CHANNEL_LIST
+        string "DPP Listen channel list"
+        default "6"
+        help
+            DPP Bootstrapping listen channels separated by commas.
+
+    config ESP_DPP_BOOTSTRAPPING_KEY
+        string "Bootstrapping key"
+        help
+            64 hex digits (or 32 bytes) of raw private key for DPP Bootstrapping.
+
+    config ESP_DPP_DEVICE_INFO
+        string "Additional Device Info"
+        default "esp32"
+        help
+            Additional ancillary information to be included in QR Code.
 
 endmenu

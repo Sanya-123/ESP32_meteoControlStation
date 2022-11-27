@@ -24,18 +24,7 @@
 
 #define PORT CONFIG_PORT_SERVER
 
-//wifi TODO to enaouther file
-/* The examples use WiFi configuration that you can set via project configuration menu
-
-   If you'd rather not, just change the below entries to strings with
-   the config you want - ie #define EXAMPLE_WIFI_SSID "mywifissid"
-*/
-#define EXAMPLE_ESP_WIFI_SSID      /*CONFIG_ESP_WIFI_SSID*/"TOPOVIY_WIFI"
-#define EXAMPLE_ESP_WIFI_PASS      /*CONFIG_ESP_WIFI_PASSWORD*/"05101962"
-#define EXAMPLE_ESP_MAXIMUM_RETRY  /*CONFIG_ESP_MAXIMUM_RETRY*/5
-
 void startNet();
-void wifi_init_sta(void *p);
 void tcp_server_task(void *pvParameters);
 
 #endif

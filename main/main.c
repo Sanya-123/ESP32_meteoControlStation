@@ -40,8 +40,6 @@
 
 #include "mqtt_client.h"
 
-//#include "demos/lv_demos.h"
-#include "examples/lv_examples.h"
 #include "display_gui.h"
 
 #define WHEATHER_DAYS_READ      5
@@ -277,8 +275,8 @@ void taskButton(void *p)
     gpio_pulldown_dis(GPIO_BACK);
     gpio_pullup_dis(GPIO_BACK);
 
-    bool oldBup = false, oldBleft = false, oldBright = false, oldBdown = false, oldBmenu = false, oldBback = false, oldB0 = false;
-    bool Bup = false, Bleft = false, Bright = false, Bdown = false, Bmenu = false, Bback = false, B0 = false;
+    bool oldBleft = false, oldBright = false, oldBmenu = false, oldBback = false;
+    bool Bleft = false, Bright = false, Bmenu = false, Bback = false;
 
     while(1)
     {
@@ -407,7 +405,7 @@ void nRF24_task(void *pvParameters)
     const uint64_t pipe1 = 0xE8E8F0F0E2LL;  //идентификатор трубы с номером 1
     ////////////// SET ////////////////
 //    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
-    uint8_t tmp = 0;
+//    uint8_t tmp = 0;
 //    nrf24_set_register(&dev, NRF24_REG_EN_AA, &tmp, 1);
     setAutoAck(false); //отключаем автоответе
 //    nrf24_set_register(&dev, NRF24_REG_FEATURE, &tmp, 1);
@@ -633,6 +631,25 @@ void task_MQTT(void *p)
 
 void app_main(void)
 {
+//    ESP_LOGI("Chip", "Free heap size %d", esp_get_free_heap_size());
+//    ESP_LOGI("Chip", "Free internal heap size %d", esp_get_free_internal_heap_size());
+//    ESP_LOGI("Chip", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
+
+//    /* Print chip information */
+//    esp_chip_info_t chip_info;
+//    esp_chip_info(&chip_info);
+//    ESP_LOGI("Chip", "This is %s chip with %d CPU core(s), WiFi%s%s, ",
+//            CONFIG_IDF_TARGET,
+//            chip_info.cores,
+//            (chip_info.features & CHIP_FEATURE_BT) ? "/BT" : "",
+//            (chip_info.features & CHIP_FEATURE_BLE) ? "/BLE" : "");
+
+//    ESP_LOGI("Chip", "silicon revision %d, ", chip_info.revision);
+
+//    ESP_LOGI("Chip", "%dMB %s flash\n", spi_flash_get_chip_size() / (1024 * 1024),
+//            (chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
+
+
     esp_log_level_set("MQTT", ESP_LOG_NONE);
     esp_log_level_set("wifi_manager", ESP_LOG_NONE);
     esp_log_level_set("weathe:", ESP_LOG_NONE);
@@ -655,7 +672,7 @@ void app_main(void)
 //    semaphoreDisplayChange = xSemaphoreCreateBinary();
 //    semaphoreDisplayNextState = xSemaphoreCreateBinary();
 //    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
-    xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 3, NULL);
+    xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 1, NULL);
     ESP_LOGI("Dislay", "Drow display");
 
     vTaskDelay(1000);
@@ -663,21 +680,8 @@ void app_main(void)
 //    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
 //    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
 //    ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
-//    print_imTest1();
-//    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
-//    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
-//    ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
-
-//    static uint16_t pixelRead[10][10];
-//    ESP_LOGI(TAG, "Read display");
-
-//    read_picturte(30, 80, 10, 10, pixelRead);
-
-//    ESP_LOGI(TAG, "Write display");
-//    send_picturte(150, 100, 10, 10, pixelRead);
-//    ESP_LOGI(TAG, "Write display OK");
 
 //    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
@@ -685,8 +689,7 @@ void app_main(void)
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
 //    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
-    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
-//    xTaskCreate(taskNextState, "ChangeD", 512, NULL, 2, NULL);
+//    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
 
 
 
@@ -710,8 +713,15 @@ void app_main(void)
 //    ESP_ERROR_CHECK(ret);
 
 
-    nvs_flash_init();
+//    nvs_flash_init();
+//    nvs_handle_t handle_nvs;
+//    nvs_open("espwifimgr", NVS_READWRITE, handle_nvs);
+//    nvs_erase_all(handle_nvs);
+//    nvs_flash_erase();
+//    nvs_flash_erase_partition("espwifimgr");
 
+    vTaskDelay(3000);//delay before start becouse net use display
+                    //so i need wait before load all display
     ESP_LOGI(TAG, "Start wifi manager");
     startNet();
 

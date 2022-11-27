@@ -18,7 +18,7 @@
 
 lv_disp_t * disp;
 
-#define LV_TICK_PERIOD_MS 1
+#define LV_TICK_PERIOD_MS 10
 
 void initDisplay();
 
@@ -89,8 +89,8 @@ void initDisplay()
 
     /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-    buf2 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
-    assert(buf2 != NULL);
+//    buf2 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+//    assert(buf2 != NULL);
 #else
     buf2 = NULL;
 #endif
