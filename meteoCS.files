@@ -23,6 +23,8 @@ main/esp_request/include/uri_parser.h
 main/esp_request/req_list.c
 main/esp_request/uri_parser.c
 main/gpioDEF.h
+main/ipgeolocation.c
+main/ipgeolocation.h
 main/main.c
 main/mh-z19.c
 main/mh-z19.h

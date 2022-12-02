@@ -14,6 +14,7 @@
 #include "freertos/semphr.h"
 #include "esp_system.h"
 #include "esp_log.h"
+#include "time.h"
 //#include "soc/rtc.h"
 //#include "driver/mcpwm.h"
 #include "driver/gpio.h"
@@ -37,6 +38,7 @@
 //#include "esp_nrf24_map.h"
 //#include "nrf24l01.h"
 #include "openWeather.h"
+#include "ipgeolocation.h"
 
 #include "mqtt_client.h"
 
@@ -487,10 +489,52 @@ void nRF24_task(void *pvParameters)
 
 extern EventGroupHandle_t s_wifi_event_group;
 
-void openWeatherTask(void *p)
+void locationAndWeatherTask(void *p)
 {
     (void)p;
-    initOpenWeather();
+
+    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
+
+    //get time and location
+    IpLocation location;
+
+    while(getLocation(&location) != 0)//tru to get location ever 10 minute
+    {
+        vTaskDelay(10*60000/portTICK_RATE_MS);//10m
+    }
+    ESP_LOGI("location", "ok get locaion and time");
+
+    struct tm tm;
+
+    tm.tm_year = location.year - 1900;
+    tm.tm_mon = location.month - 1;
+    tm.tm_mday = location.day;
+
+    tm.tm_hour = location.hour;
+    tm.tm_min = location.minutes;
+    //set local time
+    time_t t = mktime(&tm);
+    struct timeval now = { .tv_sec = t };
+    settimeofday(&now, NULL);
+
+    //get local time
+    time_t _now = time(0);
+    // Convert now to tm struct for local timezone
+    struct tm* localtm = localtime(&_now);
+
+    ESP_LOGI("time", "The local date and time is: %s", asctime(localtm));
+
+//    printf("Setting time: %s", asctime(&tm));
+
+    //set location for openweather
+    setLocation(location.city, location.country_code, location.lat, location.lon);
+
+    if(initOpenWeather() != 0)
+    {
+        ESP_LOGI("weather", "location is not sets");
+        vTaskDelete(NULL);
+    }
+
 
     while(1)
     {
@@ -500,8 +544,8 @@ void openWeatherTask(void *p)
         if(askWeather(&weatherCurent) == 0)
         {
             printOpenWeather(weatherCurent);
-            ESP_LOGI("weather", "day 0");
-            printOpenWeather(weatherDayli[0]);
+//            ESP_LOGI("weather", "day 0");
+//            printOpenWeather(weatherDayli[0]);
 
 //            ESP_LOGI("weather", "day 2");
 //            printOpenWeather(weatherDayli[2]);
@@ -683,7 +727,7 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
+//    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 3072, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);

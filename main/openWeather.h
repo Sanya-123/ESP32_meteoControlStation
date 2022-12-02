@@ -66,7 +66,8 @@ typedef struct
     float phaseMoon;
 }OpenWeather;
 
-void initOpenWeather();
+void setLocation(char *_city, char *_countryCode, float _lat, float _lon);
+int initOpenWeather();
 int askWeather(OpenWeather *veather);
 //int askWeatherDayly(OpenWeather *veather);
 int askWeatherOneCall(OpenWeather *current, OpenWeather *dayly, int days, OpenWeather *hourly, int houres);

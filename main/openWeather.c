@@ -13,14 +13,17 @@
 //#define SIZE_BUFFER_REQUEST     2048
 
 static request_t *req;
-static char requeSendData[300] = {0};
-static char requeSendDataForcastDayly[300] = {0};
-static char requeSendDataOneCall[300] = {0};
+char requeSendData[300] = {0};
+char requeSendDataForcastDayly[300] = {0};
+char requeSendDataOneCall[300] = {0};
 //char requeSendDataForcastTime[300] = {0};
 static cJSON *root = NULL;
 static SemaphoreHandle_t xSemaphoreDataIsGet;
 //char buff[SIZE_BUFFER_REQUEST] = {0};//NOTE возможно потребуеться больше для предсказания
 //uint16_t sizeBuff = 0;
+char city[128] = {0};
+char countryCode[3] = {0};
+static float lat = 0, lon = 0;
 
 void getWetharData(cJSON * root, OpenWeather *weather)
 {
@@ -146,10 +149,11 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
     }
 }
 
-extern EventGroupHandle_t s_wifi_event_group;
+//extern EventGroupHandle_t s_wifi_event_group;
 
-int download_callback(request_t *req, char *data, int len)
+static int download_callback(request_t *req, char *data, int len)
 {
+    (void)len;
     req_list_t *found = req->response->header;
     while(found->next != NULL) {
         found = found->next;
@@ -181,20 +185,36 @@ int download_callback(request_t *req, char *data, int len)
     return 0;
 }
 
-void initOpenWeather()
+void setLocation(char *_city, char *_countryCode, float _lat, float _lon)
+{
+    lat = _lat;
+    lon = _lon;
+
+    strcpy(city, _city);
+    countryCode[0] = _countryCode[0];
+    countryCode[1] = _countryCode[1];
+}
+
+int initOpenWeather()
 {
     xSemaphoreDataIsGet = xSemaphoreCreateBinary();
-    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
+//    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
 //    ESP_LOGI(TAG, "Connected to AP, freemem=%d",esp_get_free_heap_size());
     // vTaskDelay(1000/portTICK_RATE_MS);
 //    req = req_new("http://httpbin.org/post");
     //or
 
-    char City[] = "Tomsk";
+    if(strlen(city) == 0)
+        return -1;
+
+    if(strlen(countryCode) == 0)
+        return -1;
+
+//    char City[] = "Tomsk";
     char apikey[] = CONFIG_OPEN_WEATHER_API_KEY;
-    float lat = 58.5, lon = 82.5;
-    sprintf(requeSendData, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s", "weather", City, "RU", apikey, "M", "EN");
-    sprintf(requeSendDataForcastDayly, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s&cnt=%d", "forecast", City, "RU", apikey, "M", "EN", 10);
+//    float lat = 58.5, lon = 82.5;
+    sprintf(requeSendData, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s", "weather", city, countryCode, apikey, "M", "EN");
+    sprintf(requeSendDataForcastDayly, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s&cnt=%d", "forecast", city, countryCode, apikey, "M", "EN", 10);
     sprintf(requeSendDataOneCall, "http://api.openweathermap.org/data/2.5/%s?lat=%f&lon=%f&APPID=%s&units=%s&lang=%s&exclude=minutely,alerts", "onecall", /*City, "RU", */lat, lon, apikey, "M", "EN");
     //one call can get: current minutely, hourly, daily, alerts(usefull info but not only English
     //exclude minutely and alerts
@@ -205,51 +225,8 @@ void initOpenWeather()
     ESP_LOGI("HTTP", "reque:%s", requeSendData);
     req_setopt(req, REQ_SET_URI, requeSendData);
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_callback);
-}
 
-void JSON_Parse(cJSON * root, int level) {
-    //ESP_LOGI(TAG, "root->type=%s", JSON_Types(root->type));
-    cJSON *current_element = NULL;
-    //ESP_LOGI(TAG, "roo->child=%p", root->child);
-    //ESP_LOGI(TAG, "roo->next =%p", root->next);
-
-    char level_offst[128] = {};
-    for(int i = 0; i < level; i++)
-        level_offst[i] = '\t';
-    cJSON_ArrayForEach(current_element, root) {
-        //ESP_LOGI(TAG, "type=%s", JSON_Types(current_element->type));
-        //ESP_LOGI(TAG, "current_element->string=%p", current_element->string);
-        if (current_element->string) {
-            const char* string = current_element->string;
-            ESP_LOGI("cJSON:", "%s[%s]", level_offst, string);
-        }
-        if (cJSON_IsInvalid(current_element)) {
-            ESP_LOGI("cJSON:", "%s\tInvalid", level_offst);
-        } else if (cJSON_IsFalse(current_element)) {
-            ESP_LOGI("cJSON:", "%s\tFalse", level_offst);
-        } else if (cJSON_IsTrue(current_element)) {
-            ESP_LOGI("cJSON:", "%s\tTrue", level_offst);
-        } else if (cJSON_IsNull(current_element)) {
-            ESP_LOGI("cJSON:", "%s\tNull", level_offst);
-        } else if (cJSON_IsNumber(current_element)) {
-            int valueint = current_element->valueint;
-            double valuedouble = current_element->valuedouble;
-            ESP_LOGI("cJSON:", "%s\tint=%d double=%f", level_offst, valueint, valuedouble);
-        } else if (cJSON_IsString(current_element)) {
-            const char* valuestring = current_element->valuestring;
-            ESP_LOGI("cJSON:", "%s\t%s", level_offst, valuestring);
-        } else if (cJSON_IsArray(current_element)) {
-            ESP_LOGI("cJSON:", "%sArray", level_offst);
-            JSON_Parse(current_element, level + 1);
-            ESP_LOGI("cJSON:", "%sEND Array", level_offst);
-        } else if (cJSON_IsObject(current_element)) {
-            ESP_LOGI("cJSON:", "%sObject", level_offst);
-            JSON_Parse(current_element, level + 1);
-            ESP_LOGI("cJSON:", "%sEND Object", level_offst);
-        } else if (cJSON_IsRaw(current_element)) {
-            ESP_LOGI("cJSON:", "%s\tRaw(Not support)", level_offst);
-        }
-    }
+    return 0;
 }
 
 int askWeather(OpenWeather *veather)
