@@ -500,8 +500,8 @@ void openWeatherTask(void *p)
         if(askWeather(&weatherCurent) == 0)
         {
             printOpenWeather(weatherCurent);
-//            ESP_LOGI("weather", "day 0");
-//            printOpenWeather(weatherDayli[0]);
+            ESP_LOGI("weather", "day 0");
+            printOpenWeather(weatherDayli[0]);
 
 //            ESP_LOGI("weather", "day 2");
 //            printOpenWeather(weatherDayli[2]);
@@ -683,7 +683,7 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-//    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
+    xTaskCreate(openWeatherTask, "openWeathre_reque", 3072, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);

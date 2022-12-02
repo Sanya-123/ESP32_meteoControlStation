@@ -5,20 +5,20 @@
 #include "freertos/semphr.h"
 #include "esp_system.h"
 #include "esp_log.h"
-#include "cJSON/cJSON.h"
+#include "cJSON.h"
 
 #include "esp_request/include/esp_request.h"
 #include "net.h"
 
 //#define SIZE_BUFFER_REQUEST     2048
 
-request_t *req;
-char requeSendData[300] = {0};
-char requeSendDataForcastDayly[300] = {0};
-char requeSendDataOneCall[300] = {0};
+static request_t *req;
+static char requeSendData[300] = {0};
+static char requeSendDataForcastDayly[300] = {0};
+static char requeSendDataOneCall[300] = {0};
 //char requeSendDataForcastTime[300] = {0};
-cJSON *root = NULL;
-SemaphoreHandle_t xSemaphoreDataIsGet;
+static cJSON *root = NULL;
+static SemaphoreHandle_t xSemaphoreDataIsGet;
 //char buff[SIZE_BUFFER_REQUEST] = {0};//NOTE возможно потребуеться больше для предсказания
 //uint16_t sizeBuff = 0;
 
