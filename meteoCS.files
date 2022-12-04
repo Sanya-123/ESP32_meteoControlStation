@@ -75,4 +75,5 @@ main/lv_ex_get_started_3.c
 main/display_gui.h
 main/display_gui.c
 main/display_logo.c
+main/images.c
 

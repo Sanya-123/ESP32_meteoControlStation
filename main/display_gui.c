@@ -13,6 +13,9 @@
 #include "../lvgl/lvgl.h"
 #endif
 
+//TODO use my
+#include "images.h"
+
 
 /*********************
  *      DEFINES
@@ -32,16 +35,29 @@
 #define BIG_RECT_HEIGHT     140
 #define BIG_RECT_WIDTH      210
 
-#define SITING_LIST_SIZE    9
+#define SITING_LIST_SIZE    10
 
 #define MAX_CO2             5000
 #define MIN_TEMP            -50
 #define MAX_TEMP            +50
 
-//range color CO2
-#define CO2_BEGIN_RED       2600
+//range data color
+#define CO2_BEGIN_RED       2500
 #define CO2_BEGIN_ORANG     1900
-#define CO2_BEGIN_YELLOW    1100
+#define CO2_BEGIN_YELLOW    1000
+
+#define TEMP_COMFORT_MIN    16
+#define TEMP_COMFORT_MAX    26
+
+#define HUM_COMFORT_MIN     40
+#define HUM_COMFORT_MAX     70
+
+#define D2_COLOR_BLUE       0xD5E6FB
+#define D2_COLOR_GREEN      0xD3EADD
+#define D2_COLOR_YELLOW     0xFBF3D3
+#define D2_COLOR_ORNAGE     0xFCEBDB
+#define D2_COLOR_RED        0xFBDDDD
+
 
 #define STYLE_SIZE          7
 
@@ -65,6 +81,7 @@ static void mainPage2_create(lv_obj_t * parent);
 static void mainPage3_create(lv_obj_t * parent);
 static void mainPage4_create(lv_obj_t * parent);
 static void extDataPage_create(lv_obj_t * parent, lv_obj_t **_tabel);
+static void weatherPage_create(lv_obj_t * parent);
 
 static void qrCodePage_create(lv_obj_t * parent);
 static void urlPage_create(lv_obj_t * parent);
@@ -82,7 +99,7 @@ static ButtonState buttonState = ButtonRealesed;
 //static ButtonState buttonState[ButtonNext + 1] = {ButtonRealesed};
 
 static DisplayState stateDisplay = StateMainDisplay;
-static uint32_t timeOnDisplay[DISPLAY_SIZE] = {3, 3, 3, 3, 3};//time state on display [s]
+static uint32_t timeOnDisplay[DISPLAY_SIZE] = {3, 3, 3, 3, 3, 3};//time state on display [s]
 
 static lv_obj_t * buttonLeft, * buttonRight, * buttonSettings, * buttonAction;
 static lv_obj_t * labelLeft, * labelRight, * labelSettings, * labelAction;
@@ -112,6 +129,7 @@ static lv_obj_t * labelCo22, * labelHumidity2, * labelTemperatre2, * labelPressu
 static lv_obj_t * labelCo2ppm2/*, * labelCo2co22*/;
 static lv_style_t styleDisplayMain2;
 static lv_obj_t * labelTime2, * labelDate2;
+static lv_obj_t * ledWifi2;
 
 //therd display
 static lv_obj_t * displayMain3;
@@ -129,6 +147,18 @@ static lv_obj_t * labelTime4, * labelDate4;
 //display extData
 static lv_obj_t * displayExtData;
 static lv_obj_t * tableExtData;
+
+//weather display
+static lv_obj_t * displayWeather;
+static lv_obj_t * wMainImage;
+static lv_obj_t * wMainTemperature, * wFellTemperature;
+static lv_obj_t * wHummidity;
+static lv_obj_t * wTime;
+static lv_obj_t * wLastUpdate;
+static lv_obj_t * wForcastHTemp[SIZE_FORCAST] = {NULL};
+static lv_obj_t * wForcastHImage[SIZE_FORCAST] = {NULL};
+static lv_obj_t * wForcastDTemp[SIZE_FORCAST] = {NULL};
+static lv_obj_t * wForcastDImage[SIZE_FORCAST] = {NULL};
 
 //sitings display
 static lv_obj_t * displaySettings;
@@ -156,7 +186,7 @@ static lv_style_t styleListSettings;
 //display qrcode
 static lv_obj_t * displayQRcode;
 static lv_obj_t * qrCodeThisAP, * qrCodeConnectToAp;
-static bool enableShowQr = false;//show wifi qr on action button clicck
+static bool enableShowQr = true;//show wifi qr on action button clicck
 
 //display url
 static lv_obj_t * displayURL;
@@ -285,11 +315,14 @@ void drowDisplayLVGL(void)
     displayMain3 = lv_tileview_add_tile(tl, StateMainDisplay3, 0, LV_DIR_NONE);
     mainPage3_create(displayMain3);
 
-    displayMain4 = lv_tileview_add_tile(tl, StateExtDisplay, 0, LV_DIR_NONE);
+    displayMain4 = lv_tileview_add_tile(tl, StateMainDisplay4, 0, LV_DIR_NONE);
     mainPage4_create(displayMain4);
 
-    displayExtData = lv_tileview_add_tile(tl, StateWheather, 0, LV_DIR_NONE);
+    displayExtData = lv_tileview_add_tile(tl, StateExtDisplay, 0, LV_DIR_NONE);
     extDataPage_create(displayExtData, &tableExtData);
+
+    displayWeather = lv_tileview_add_tile(tl, StateWheather, 0, LV_DIR_NONE);
+    weatherPage_create(displayWeather);
 
 
 
@@ -321,9 +354,9 @@ void drowDisplayLVGL(void)
 //    lv_anim_set_ready_cb(&a2, lv_obj_del_anim_ready_cb);
 //    lv_anim_start(&a2);
 
+    lv_png_init();
 #if USE_LOGO
     //draw logo prewie
-    lv_png_init();
 
     LV_IMG_DECLARE(logo);
 //    extern lv_img_dsc_t logo;
@@ -363,13 +396,14 @@ void drowDisplayLVGL(void)
     //test data
     setCO2(2700);
     setHumiditi(50);
-    setTemperature(45);
+    setTemperature(14);
     setPressure(1015);
     setExtName(3, "Ground");
     setExtTemp(0, 35);
     setExtTemp(2, -15);
     setExtHumm(3, 65);
     setExtBat(1, 99);
+    setWifiConnect(true);
 }
 
 void meteoButtonClicked(Button button, ButtonState state)
@@ -431,12 +465,30 @@ void setCO2(int val)
     if(val > MAX_CO2)
         val = MAX_CO2;
 
+    //display 1
     lv_label_set_text_fmt(labelCo2, "%dppm", val);
+    if(val >= CO2_BEGIN_RED)
+        lv_obj_set_style_bg_color(co2Obj, lv_palette_main(LV_PALETTE_DEEP_ORANGE), 0);
+    else if(val >= CO2_BEGIN_ORANG)
+        lv_obj_set_style_bg_color(co2Obj, lv_palette_main(LV_PALETTE_ORANGE), 0);
+    else if(val >= CO2_BEGIN_YELLOW)
+        lv_obj_set_style_bg_color(co2Obj, lv_palette_main(LV_PALETTE_YELLOW), 0);
+    else
+        lv_obj_set_style_bg_color(co2Obj, lv_palette_main(LV_PALETTE_LIGHT_GREEN), 0);
 
     //display 2
     lv_label_set_text_fmt(labelCo22, "%d", val);
 //    lv_obj_align_to(labelCo2co22, labelCo22, LV_ALIGN_OUT_LEFT_BOTTOM, -5, -6);
     lv_obj_align_to(labelCo2ppm2, labelCo22, LV_ALIGN_OUT_RIGHT_BOTTOM, +3, -6);
+
+    if(val >= CO2_BEGIN_RED)
+        lv_obj_set_style_bg_color(co2Obj2, lv_color_hex(D2_COLOR_RED), 0);
+    else if(val >= CO2_BEGIN_ORANG)
+        lv_obj_set_style_bg_color(co2Obj2, lv_color_hex(D2_COLOR_ORNAGE), 0);
+    else if(val >= CO2_BEGIN_YELLOW)
+        lv_obj_set_style_bg_color(co2Obj2, lv_color_hex(D2_COLOR_YELLOW), 0);
+    else
+        lv_obj_set_style_bg_color(co2Obj2, lv_color_hex(D2_COLOR_GREEN), 0);
 
     //display 3
     if(val >= CO2_BEGIN_RED)
@@ -471,7 +523,15 @@ void setHumiditi(int val)
 {
     lv_label_set_text_fmt(labelHumidity, "%d%%", val);
 
+    //display 2
     lv_label_set_text_fmt(labelHumidity2, "%3d %%", val);
+    lv_label_set_text_fmt(labelTemperatre2, "%3d C", val);
+    if(val < HUM_COMFORT_MIN)
+        lv_obj_set_style_bg_color(humidityObj2, lv_color_hex(D2_COLOR_RED), 0);
+    else if(val > HUM_COMFORT_MAX)
+        lv_obj_set_style_bg_color(humidityObj2, lv_color_hex(D2_COLOR_BLUE), 0);
+    else
+        lv_obj_set_style_bg_color(humidityObj2, lv_color_hex(D2_COLOR_GREEN), 0);
 
     //display 3
     lv_meter_set_indicator_end_value(meterHumidity3, indicHumidity3, val);
@@ -491,7 +551,14 @@ void setTemperature(int val)
 
     lv_label_set_text_fmt(labelTemperatre, "%3dC", val);
 
+    //display 2
     lv_label_set_text_fmt(labelTemperatre2, "%3d C", val);
+    if(val < TEMP_COMFORT_MIN)
+        lv_obj_set_style_bg_color(temperatureObj2, lv_color_hex(D2_COLOR_BLUE), 0);
+    else if(val > TEMP_COMFORT_MAX)
+        lv_obj_set_style_bg_color(temperatureObj2, lv_color_hex(D2_COLOR_RED), 0);
+    else
+        lv_obj_set_style_bg_color(temperatureObj2, lv_color_hex(D2_COLOR_GREEN), 0);
 
     //display 3
     lv_meter_set_indicator_end_value(meterTemperature3, indicTemperature3, val);
@@ -528,14 +595,15 @@ void setTime(int h, int m)
     lv_label_set_text_fmt(labelTime2, "%d:%d", h, m);
 
     lv_label_set_text_fmt(labelTime4, "%d:%d", h, m);
+
+    lv_label_set_text_fmt(wTime, "%d:%d", h, m);
 }
 
 void setDate(int d, int m, int y)
 {
     lv_label_set_text_fmt(labelDate, "%d.%d.%d", d, m, y);
 
-    static const char * month_names_def[12] = LV_CALENDAR_DEFAULT_MONTH_NAMES;
-    lv_label_set_text_fmt(labelDate2, "%d %s %d", d, month_names_def[m], y);
+    lv_label_set_text_fmt(labelDate2, "%d.%d.%d", d, m, y);
 
     lv_label_set_text_fmt(labelDate4, "%d.%d.%d", d, m, y);
 }
@@ -547,7 +615,20 @@ void setWifiConnect(bool ok)
     else
         lv_led_off(ledWifi);
 
+    if(ok)
+        lv_led_set_color(ledWifi2, lv_palette_lighten(LV_PALETTE_LIGHT_GREEN, 2));
+    else
+        lv_led_set_color(ledWifi2, lv_palette_lighten(LV_PALETTE_RED, 2));
+
     //TODO shwo messadge
+}
+
+void setWifiLedOn(bool en)
+{
+    if(en)
+        lv_led_on(ledWifi2);
+    else
+        lv_led_off(ledWifi2);
 }
 
 void setEnableQrPage(bool en)
@@ -612,6 +693,63 @@ void setExtBat(int numSensor, int data)
     if(data > 100)
         data = 100;
     setExtData(numSensor, 3, &data);
+}
+
+void setWeatherCurentTemp(int temp)
+{
+    lv_label_set_text_fmt(wMainTemperature, "%+d", temp);
+}
+
+void setWeatherCurentTempFell(int temp)
+{
+    lv_label_set_text_fmt(wFellTemperature, "Feel %+d", temp);
+}
+
+void setWeatherCurentHummidity(int hum)
+{
+    lv_label_set_text_fmt(wHummidity, "H:%3d%%", hum);
+}
+
+void setWeatherCurentPicture(int num)
+{
+    lv_img_set_src(wMainImage, lv_weather[num].img_dsc);
+}
+
+void setWeatherUpdateTime(int h, int m)
+{
+    lv_label_set_text_fmt(wLastUpdate, "update:%d:%d", h, m);
+}
+
+void setForcastHTemp(unsigned int f, int temp)
+{
+    if(f < SIZE_FORCAST)
+    {
+        lv_label_set_text_fmt(wForcastHTemp[f], "%+d(+%dh)", temp, STEP_FORCAST_HOUR*(f + 1));
+    }
+}
+
+void setForcastHPicture(unsigned int f, int num)
+{
+    if(f < SIZE_FORCAST)
+    {
+        lv_img_set_src(wForcastHImage[f], lv_weather[num].img_dsc);
+    }
+}
+
+void setForcastDTemp(unsigned int f, int temp)
+{
+    if(f < SIZE_FORCAST)
+    {
+        lv_label_set_text_fmt(wForcastDTemp[f], "%+d(+%dd)", temp, (f + 1));
+    }
+}
+
+void setForcastDPicture(unsigned int f, int num)
+{
+    if(f < SIZE_FORCAST)
+    {
+        lv_img_set_src(wForcastDImage[f], lv_weather[num].img_dsc);
+    }
 }
 
 DisplayState getDisplay(bool next)//get statte after current
@@ -1123,20 +1261,23 @@ static void mainPage2_create(lv_obj_t * parent)
     lv_style_set_text_color(&styleDisplayMain2, lv_color_make(0x00, 0x00, 0x00));
     lv_style_set_text_font(&styleDisplayMain2, fontData);
     lv_style_set_radius(&styleDisplayMain2, 0);
-    lv_style_set_border_width(&styleDisplayMain2, 3);
-    lv_style_set_border_color(&styleDisplayMain2, lv_color_make(0xFF, 0xFF, 0xFF));
+    lv_style_set_border_width(&styleDisplayMain2, 0);
+//    lv_style_set_border_color(&styleDisplayMain2, lv_color_make(0xFF, 0xFF, 0xFF));
 
     co2Obj2 = lv_obj_create(parent);
     humidityObj2 = lv_obj_create(parent);
     temperatureObj2 = lv_obj_create(parent);
     pressureObj2 = lv_obj_create(parent);
     timeDateObj2 = lv_obj_create(parent);
+    lv_obj_clear_flag(timeDateObj2, LV_OBJ_FLAG_SCROLLABLE);
 
     lv_obj_add_style(co2Obj2, &styleDisplayMain2, 0);
     lv_obj_add_style(humidityObj2, &styleDisplayMain2, 0);
     lv_obj_add_style(temperatureObj2, &styleDisplayMain2, 0);
     lv_obj_add_style(pressureObj2, &styleDisplayMain2, 0);
-    lv_obj_add_style(timeDateObj2, &styleDisplayMain2, 0);
+//    lv_obj_add_style(timeDateObj2, &styleDisplayMain2, 0);
+    lv_obj_set_style_radius(timeDateObj2, 0, 0);
+    lv_obj_set_style_border_width(timeDateObj2, 0, 0);
 
     labelCo22 = lv_label_create(co2Obj2);
     labelHumidity2 = lv_label_create(humidityObj2);
@@ -1144,39 +1285,52 @@ static void mainPage2_create(lv_obj_t * parent)
     labelPressure2 = lv_label_create(pressureObj2);
 
 //    lv_palette_lighten()
-    lv_obj_set_style_bg_color(co2Obj2, lv_color_make(0xFB, 0xDD, 0xDD), 0);
-    lv_obj_set_style_bg_color(humidityObj2, lv_color_make(0xD5, 0xE6, 0xFB), 0);
-    lv_obj_set_style_bg_color(temperatureObj2, lv_color_make(0xEB, 0xDC, 0xF9), 0);
-    lv_obj_set_style_bg_color(pressureObj2, lv_color_make(0xFC, 0xEB, 0xDB), 0);
-    lv_obj_set_style_bg_color(timeDateObj2, lv_color_make(0xD3, 0xEA, 0xDD), 0);
+    lv_obj_set_style_bg_color(co2Obj2, lv_color_make(0xD3, 0xEA, 0xDD), 0);
+    lv_obj_set_style_bg_color(humidityObj2, lv_color_make(0xD3, 0xEA, 0xDD), 0);
+    lv_obj_set_style_bg_color(temperatureObj2, lv_color_make(0xD3, 0xEA, 0xDD), 0);
+    lv_obj_set_style_bg_color(pressureObj2, lv_color_make(0xEB, 0xDC, 0xF9), 0);
+//    lv_obj_set_style_bg_color(timeDateObj2, lv_color_make(0xD3, 0xEA, 0xDD), 0);
 
-    lv_obj_set_style_border_side(co2Obj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
-    lv_obj_set_style_border_side(timeDateObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
-    lv_obj_set_style_border_side(humidityObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
-    lv_obj_set_style_border_side(temperatureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
-    lv_obj_set_style_border_side(pressureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+//    lv_obj_set_style_border_side(co2Obj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
+//    lv_obj_set_style_border_side(timeDateObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_LEFT, 0);
+//    lv_obj_set_style_border_side(humidityObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+//    lv_obj_set_style_border_side(temperatureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
+//    lv_obj_set_style_border_side(pressureObj2, LV_BORDER_SIDE_FULL - LV_BORDER_SIDE_RIGHT, 0);
 
-    lv_obj_set_size(co2Obj2, BIG_RECT_WIDTH, BIG_RECT_HEIGHT);
-    lv_obj_set_size(humidityObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
-    lv_obj_set_size(temperatureObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
-    lv_obj_set_size(pressureObj2, SMALL_RECT_WIDTH, SMALL_RECT_HEIGHT);
-    lv_obj_set_size(timeDateObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT);
+    lv_obj_set_size(co2Obj2, BIG_RECT_WIDTH-3, BIG_RECT_HEIGHT-6);
+    lv_obj_set_size(humidityObj2, SMALL_RECT_WIDTH-3, SMALL_RECT_HEIGHT-3);
+    lv_obj_set_size(temperatureObj2, SMALL_RECT_WIDTH-3, SMALL_RECT_HEIGHT-6);
+    lv_obj_set_size(pressureObj2, SMALL_RECT_WIDTH-3, SMALL_RECT_HEIGHT-6);
+    lv_obj_set_size(timeDateObj2, BIG_RECT_WIDTH-3, SMALL_RECT_HEIGHT-3);
 
-    lv_obj_set_pos(co2Obj2, 0, SMALL_RECT_HEIGHT);
-    lv_obj_set_pos(humidityObj2, BIG_RECT_WIDTH, 0);
-    lv_obj_set_pos(temperatureObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT);
-    lv_obj_set_pos(pressureObj2, BIG_RECT_WIDTH, SMALL_RECT_HEIGHT*2);
+    lv_obj_set_pos(co2Obj2, 0, SMALL_RECT_HEIGHT+3);
+    lv_obj_set_pos(humidityObj2, BIG_RECT_WIDTH + 3, 0);
+    lv_obj_set_pos(temperatureObj2, BIG_RECT_WIDTH + 3, SMALL_RECT_HEIGHT+3);
+    lv_obj_set_pos(pressureObj2, BIG_RECT_WIDTH + 3, SMALL_RECT_HEIGHT*2+3);
     lv_obj_set_pos(timeDateObj2, 0, 0);
 
     labelTime2 = lv_label_create(timeDateObj2);
-    lv_obj_set_style_text_font(labelTime2, &lv_font_montserrat_22, 0);
-    lv_obj_set_pos(labelTime2, 0, 10);
+    lv_obj_set_style_text_font(labelTime2, &lv_font_montserrat_40, 0);
+    lv_obj_align(labelTime2, LV_ALIGN_LEFT_MID, -8, 0);
     lv_label_set_text(labelTime2, "20:47");
 
     labelDate2 = lv_label_create(timeDateObj2);
-    lv_obj_set_style_text_font(labelDate2, &lv_font_montserrat_12, 0);
-    lv_obj_set_pos(labelDate2, 65, 20);
-    lv_label_set_text(labelDate2, "23 november 2022");
+    lv_obj_set_style_text_font(labelDate2, &lv_font_montserrat_18, 0);
+//    lv_obj_set_pos(labelDate2, 65, 20);
+    lv_obj_align_to(labelDate2, labelTime2, LV_ALIGN_OUT_RIGHT_BOTTOM, 0, 0);
+    lv_label_set_text(labelDate2, "23.03.2022");
+
+    //wifi data
+    ledWifi2  = lv_led_create(timeDateObj2);
+    lv_obj_set_size(ledWifi2, 21, 21);
+    lv_led_set_color(ledWifi2, lv_palette_main(LV_PALETTE_LIGHT_GREEN));
+    lv_obj_align_to(ledWifi2, labelDate2, LV_ALIGN_OUT_TOP_MID, 0, -4);
+//    lv_led_off(ledWifi2);
+    lv_led_set_color(ledWifi2, lv_palette_main(LV_PALETTE_RED));
+
+    lv_obj_t * wifiImage = lv_img_create(ledWifi2);
+    lv_img_set_src(wifiImage, LV_SYMBOL_WIFI);
+    lv_obj_align(wifiImage, LV_ALIGN_CENTER, 1, 1);
 
     lv_label_set_text(labelCo22, "5000");
     lv_label_set_text(labelHumidity2, "100 %");
@@ -1431,12 +1585,12 @@ static void mainPage4_create(lv_obj_t * parent)
     //time
     labelTime4 = lv_label_create(parent);
     lv_obj_set_style_text_font(labelTime4, &lv_font_montserrat_36, 0);
-    lv_label_set_text(labelTime4, "22:38");
+    lv_label_set_text(labelTime4, "20:47");
     lv_obj_set_pos(labelTime4, 220, 2);
 
     labelDate4 = lv_label_create(parent);
     lv_obj_set_style_text_font(labelDate4, &lv_font_montserrat_16, 0);
-    lv_label_set_text(labelDate4, "25.08.2022");
+    lv_label_set_text(labelDate4, "23.03.2022");
 //    lv_obj_set_pos(labelTime4, 220, 2);
     lv_obj_align_to(labelDate4, labelTime4, LV_ALIGN_OUT_BOTTOM_MID, 4, -4);
 
@@ -1528,6 +1682,156 @@ static void extDataPage_create(lv_obj_t * parent, lv_obj_t **_tabel)
     lv_obj_add_event_cb(tabel, draw_part_event_cb, LV_EVENT_DRAW_PART_BEGIN, NULL);
 }
 
+static void weatherPage_create(lv_obj_t * parent)
+{
+    //NOTE use white image
+    //set a litle dark BG for contrast wheather image on white theme
+    lv_obj_set_style_bg_color(parent, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(parent, LV_OPA_10, 0);
+    lv_obj_clear_flag(parent, LV_OBJ_FLAG_SCROLLABLE);
+
+
+    wMainImage = lv_img_create(parent);
+    lv_obj_set_pos(wMainImage, 240, 10);
+    lv_img_set_src(wMainImage, lv_weather[10].img_dsc);
+
+    wMainTemperature = lv_label_create(parent);
+    lv_label_set_text_fmt(wMainTemperature, "%+d", 25);
+    lv_obj_set_style_text_font(wMainTemperature, &lv_font_montserrat_42, 0);
+    lv_obj_align_to(wMainTemperature, wMainImage, LV_ALIGN_OUT_LEFT_MID, -20, -18);
+
+    wFellTemperature = lv_label_create(parent);
+    lv_label_set_text_fmt(wFellTemperature, "Feel %+d", 22);
+    lv_obj_set_style_text_font(wFellTemperature, &lv_font_montserrat_16, 0);
+    lv_obj_align_to(wFellTemperature, wMainTemperature, LV_ALIGN_OUT_BOTTOM_MID, 0, 0);
+
+    wHummidity = lv_label_create(parent);
+    lv_label_set_text_fmt(wHummidity, "H:%3d%%", 80);
+    lv_obj_set_style_text_font(wHummidity, &lv_font_montserrat_14, 0);
+    lv_obj_align_to(wHummidity, wFellTemperature, LV_ALIGN_OUT_BOTTOM_MID, 0, 3);
+
+    wTime = lv_label_create(parent);
+    lv_label_set_text(wTime, "20:47");
+    lv_obj_set_style_text_font(wTime, &lv_font_montserrat_40, 0);
+    lv_obj_align(wTime, LV_ALIGN_TOP_LEFT, 5, 5);
+
+    wLastUpdate = lv_label_create(parent);
+    lv_label_set_text(wLastUpdate, "update:19:30");
+    lv_obj_set_style_text_font(wLastUpdate, &lv_font_montserrat_16, 0);
+    lv_obj_align_to(wLastUpdate, wTime, LV_ALIGN_OUT_BOTTOM_MID, 0, 5);
+
+
+    static lv_point_t line_points[] = { {5, 0}, {310, 0}};
+
+    lv_obj_t * line1;
+    line1 = lv_line_create(parent);
+    lv_line_set_points(line1, line_points, 2);     /*Set the points*/
+    lv_obj_set_pos(line1, 0, 85);
+
+    //create forcast images
+//    lv_obj_t *labelTimeForcast;
+    for(int i = 0; i < SIZE_FORCAST; i++)
+    {
+        wForcastHTemp[i] = lv_label_create(parent);
+        wForcastHImage[i] = lv_img_create(parent);
+        wForcastDTemp[i] = lv_label_create(parent);
+        wForcastDImage[i] = lv_img_create(parent);
+
+        //H forcast image
+//        lv_obj_set_pos(wForcastHImage[i], i*80 + 10, 95);
+        lv_img_set_src(wForcastHImage[i], lv_weather[10].img_dsc);
+        lv_img_set_zoom(wForcastHImage[i], 128);
+        lv_obj_set_pos(wForcastHImage[i], i*80 + 10, 100);
+
+        //H forcast val
+        lv_label_set_text_fmt(wForcastHTemp[i], "%+d(+%dh)", +50, STEP_FORCAST_HOUR*(i + 1));
+        lv_obj_set_style_text_font(wForcastHTemp[i], &lv_font_montserrat_14, 0);
+        lv_obj_align_to(wForcastHTemp[i], wForcastHImage[i], LV_ALIGN_OUT_TOP_MID, 0, 7);
+
+
+        //D forcast image
+        lv_img_set_src(wForcastDImage[i], lv_weather[10].img_dsc);
+        lv_img_set_zoom(wForcastDImage[i], 128);
+        lv_obj_set_pos(wForcastDImage[i], i*80 + 10, 160);
+
+        //D forcast val
+        lv_label_set_text_fmt(wForcastDTemp[i], "%+d(+%dd)", +50, (i + 1));
+        lv_obj_set_style_text_font(wForcastDTemp[i], &lv_font_montserrat_14, 0);
+        lv_obj_align_to(wForcastDTemp[i], wForcastDImage[i], LV_ALIGN_OUT_TOP_MID, 0, 7);
+
+    }
+
+//    lv_img_set_src(wForcastHImage[0], lv_weather[35].img_dsc);
+//    lv_img_set_src(wForcastHImage[1], lv_weather[23].img_dsc);
+//    lv_img_set_src(wForcastHImage[2], lv_weather[31].img_dsc);
+//    lv_img_set_src(wForcastHImage[3], lv_weather[39].img_dsc);
+
+//    lv_img_set_src(wForcastDImage[0], lv_weather[24].img_dsc);
+////    lv_img_set_src(wForcastDImage[1], lv_weather[11].img_dsc);
+////    lv_img_set_src(wForcastDImage[2], lv_weather[26].img_dsc);
+//    lv_img_set_src(wForcastDImage[1], lv_weather[35].img_dsc);
+//    lv_img_set_src(wForcastDImage[2], lv_weather[10].img_dsc);
+//    lv_img_set_src(wForcastDImage[3], lv_weather[5].img_dsc);
+
+
+    lv_img_set_src(wForcastHImage[0], lv_weather[32].img_dsc);
+    lv_img_set_src(wForcastHImage[1], lv_weather[33].img_dsc);
+    lv_img_set_src(wForcastHImage[2], lv_weather[34].img_dsc);
+    lv_img_set_src(wForcastHImage[3], lv_weather[35].img_dsc);
+
+    lv_img_set_src(wForcastDImage[0], lv_weather[36].img_dsc);
+    lv_img_set_src(wForcastDImage[1], lv_weather[37].img_dsc);
+    lv_img_set_src(wForcastDImage[2], lv_weather[38].img_dsc);
+    lv_img_set_src(wForcastDImage[3], lv_weather[39].img_dsc);
+
+
+
+//    LV_IMG_DECLARE(b_0_2x);
+//    LV_IMG_DECLARE(b_5_2x);
+//    LV_IMG_DECLARE(b_11_2x);
+//    LV_IMG_DECLARE(b_99_2x);
+
+//    LV_IMG_DECLARE(w_0_2x);
+//    LV_IMG_DECLARE(w_5_2x);
+//    LV_IMG_DECLARE(w_11_2x);
+//    LV_IMG_DECLARE(w_99_2x);
+
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &b_0_2x);
+//    lv_obj_set_pos(wMainImage, 5, 5);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &w_0_2x);
+//    lv_obj_set_pos(wMainImage, 5, 110);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &b_5_2x);
+//    lv_obj_set_pos(wMainImage, 110, 5);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &w_5_2x);
+//    lv_obj_set_pos(wMainImage, 110, 110);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &b_11_2x);
+//    lv_obj_set_pos(wMainImage, 240, 5);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &w_11_2x);
+//    lv_obj_set_pos(wMainImage, 240, 110);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &b_99_2x);
+//    lv_obj_set_pos(wMainImage, 370, 5);
+
+//    wMainImage = lv_img_create(parent);
+//    lv_img_set_src(wMainImage, &w_99_2x);
+//    lv_obj_set_pos(wMainImage, 370, 110);
+
+
+}
+
 static void qrCodePage_create(lv_obj_t * parent)
 {
     qrCodeThisAP = lv_qrcode_create(parent, 100, lv_color_hex(0), lv_color_hex(0xFFFFFFFF));
@@ -1599,8 +1903,6 @@ static void focusChange_event_cb(lv_event_t * e)
                                             lv_obj_set_style_text_font(label, &lv_font_montserrat_30, 0);   \
                                             lv_label_set_text_fmt(label, "%d", MAX_TIME_ON_DISPLAY);}while(0);
 
-#include <stdio.h>
-
 static void settingPage_create(lv_obj_t * parent)
 {
     lv_obj_t * listSetings[SITING_LIST_SIZE] = {NULL/*switchTimerEn*/};
@@ -1631,6 +1933,8 @@ static void settingPage_create(lv_obj_t * parent)
     listSetings[6] = labelTimeDisplay[3] = label;
     CREATE_LABEL_TIME(130, 140);
     listSetings[7] = labelTimeDisplay[4] = label;
+    CREATE_LABEL_TIME(220, 140);
+    listSetings[8] = labelTimeDisplay[5] = label;
 
 //    switchTimerEn
     //help label
@@ -1666,6 +1970,10 @@ static void settingPage_create(lv_obj_t * parent)
     lv_label_set_text(label, "Ext data");
     lv_obj_align_to(label, labelTimeDisplay[4], LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
 
+    label = lv_label_create(parent);
+    lv_label_set_text(label, "Weather");
+    lv_obj_align_to(label, labelTimeDisplay[5], LV_ALIGN_OUT_BOTTOM_MID, 0, 10);//align position
+
     for(int i = 0 ; i < DISPLAY_SIZE; i++)
         if(labelTimeDisplay[i] != NULL)
             lv_label_set_text_fmt(labelTimeDisplay[i], "%d", timeOnDisplay[i]);
@@ -1679,7 +1987,7 @@ static void settingPage_create(lv_obj_t * parent)
     //create widget select object
     color_changer_create(parent);
 
-    listSetings[8] = btnColorSelect;
+    listSetings[9] = btnColorSelect;
 
     label = lv_label_create(parent);
     lv_label_set_text(label, "dark theme");

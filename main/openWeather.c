@@ -168,6 +168,7 @@ static int download_callback(request_t *req, char *data, int len)
     ESP_LOGI("HTTP","*DATA:%s", data);
     root = cJSON_Parse(data);
     ESP_LOGI("HTTP","OK cJSON_Parse");
+
     xSemaphoreGive( xSemaphoreDataIsGet );
     //TODO еселать это и семафоры если за раз не будет приходиться вся посылка а это маловероятно
 //    if((sizeBuff + len) < SIZE_BUFFER_REQUEST)
@@ -223,6 +224,8 @@ int initOpenWeather()
     req_setopt(req, REQ_SET_METHOD, "GET");
 
     ESP_LOGI("HTTP", "reque:%s", requeSendData);
+    ESP_LOGI("HTTP", "forcast:%s", requeSendDataForcastDayly);
+    ESP_LOGI("HTTP", "onecall:%s", requeSendDataOneCall);
     req_setopt(req, REQ_SET_URI, requeSendData);
     req_setopt(req, REQ_FUNC_DOWNLOAD_CB, download_callback);
 

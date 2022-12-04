@@ -44,8 +44,8 @@
 
 #include "display_gui.h"
 
-#define WHEATHER_DAYS_READ      5
-#define WHEATHER_HOUR_READ      24
+#define WHEATHER_DAYS_READ      SIZE_FORCAST
+#define WHEATHER_HOUR_READ      STEP_FORCAST_HOUR*SIZE_FORCAST
 
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_3) | (1ULL << GPIO_INPUT_IO_4))
@@ -488,6 +488,7 @@ void nRF24_task(void *pvParameters)
 }
 
 extern EventGroupHandle_t s_wifi_event_group;
+OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEATHER_HOUR_READ];
 
 void locationAndWeatherTask(void *p)
 {
@@ -536,6 +537,7 @@ void locationAndWeatherTask(void *p)
     }
 
 
+
     while(1)
     {
 
@@ -544,6 +546,20 @@ void locationAndWeatherTask(void *p)
         if(askWeather(&weatherCurent) == 0)
         {
             printOpenWeather(weatherCurent);
+
+            //set update time
+            _now = time(0);
+            localtm = localtime(&_now);
+
+            setWeatherUpdateTime(localtm->tm_hour, localtm->tm_min);
+
+            //set weather to display
+            setWeatherCurentTemp((int)weatherCurent.temp);
+            setWeatherCurentTempFell((int)weatherCurent.feels_like);
+            setWeatherCurentHummidity((int)weatherCurent.humidity);
+
+
+
 //            ESP_LOGI("weather", "day 0");
 //            printOpenWeather(weatherDayli[0]);
 
@@ -727,7 +743,7 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-//    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 3072, NULL, 1, NULL);
+    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 4096*4, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
