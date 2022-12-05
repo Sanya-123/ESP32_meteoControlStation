@@ -47,6 +47,8 @@
 #define WHEATHER_DAYS_READ      SIZE_FORCAST
 #define WHEATHER_HOUR_READ      STEP_FORCAST_HOUR*SIZE_FORCAST
 
+#define EXT_NRF_SIZE            SIZE_EXT_DATA
+
 
 #define GPIO_INPUT_PIN_SEL  ((1ULL << GPIO_INPUT_IO_3) | (1ULL << GPIO_INPUT_IO_4))
 
@@ -67,6 +69,9 @@ OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEAT
 uint32_t periodChange = 30000;//NOTE configuraleble state or config individual stete for ever display
 double temp = 0.0, pressure = 0.0, humidity = 0.0;
 uint16_t co2Val;
+
+uint8_t NRF_ConnectedDevice = 0;//Read from mem
+uint64_t localPipe;
 
 
 int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
@@ -385,6 +390,103 @@ void task_co2(void *p)
 }
 
 //extern spi_bus_config_t buscfg;
+void addNewNRF()
+{
+    ESP_LOGI("NRF", "Add new dev");
+    uint8_t buffTx[8] = {0};
+    uint64_t newPipe = localPipe + NRF_ConnectedDevice + 1;
+    memcpy(buffTx, &newPipe, 5);
+    writeData(buffTx, 8);
+}
+
+void nRF24_new_task(void *pvParameters)
+{
+    vTaskDelay(1000/portTICK_RATE_MS);
+    (void)pvParameters;
+
+    const uint64_t pipeWrite = 0xE8E8E8E8E8LL;  //идентификатор трубы от ControlStation до внешнего модуля
+    const uint64_t pipeGlovabal = 0xE8E8F0F0E2LL;  //обший идентификатор трубы
+    //read id
+    uint8_t chipid[6];
+    esp_efuse_mac_get_default(chipid);
+    uint64_t chipid64 = 0;
+    memcpy(&chipid64, chipid, 6);
+    ESP_LOGI("chipId", "%X\n", (uint32_t)chipid64);
+    ESP_LOGI("chipId", "%02X:%02X:%02X:%02X:%02X:%02X", chipid[0], \
+            chipid[1], chipid[2], chipid[3], chipid[4], chipid[5]);
+    localPipe = chipid64 << 8;
+    //localPipe_n = {localPipe[40:8], n} == localPipe + n == localPipe | n;
+//    uint64_t NRF
+    NRF_ConnectedDevice = 0;//Read from mem
+
+
+
+    rf24_bus_cfg_t rf24_bus_cfg = {
+        .spi_host = VSPI_HOST,
+        .init_host = false,
+        .mosi_io_num = GPIO_SPI_MOSI,
+        .miso_io_num = GPIO_SPI_MISO,
+        .sclk_io_num = GPIO_SPI_CLK,
+        .cs_io_num = GPIO_NRF_CS,
+        .ce_io_num = GPIO_NRF_CE
+    };
+
+    NRF_Init(rf24_bus_cfg);
+    ////////////// SET ////////////////
+    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
+    setAutoAck(false); //отключаем автоответе
+    disableDynamicPayloads(); //отключаем динамический размер нагрузки
+    //disableCRC();
+    setPayloadSize(8); //размер нагрузки 8 байт
+    setChannel(100); //канал 100
+    openWritingPipe(pipeWrite);
+
+    openReadingPipe(0, pipeGlovabal); //открываем трубу с номером 0
+
+    for(uint8_t i = 1; i <= EXT_NRF_SIZE; i++)
+        openReadingPipe(i, localPipe + i); //открываем трубу с номером 1
+    startListening();
+    ///////////////////////////////////
+
+    uint8_t buff[8] = {0};
+//    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
+    int status;
+
+    setAddExternal(addNewNRF);//set function on add button
+
+    while(1)
+    {
+        vTaskDelay(1000/portTICK_RATE_MS);
+        if(!availableMy())
+
+        {
+
+        }
+        else
+        {
+            status = read_payload(buff, 8);
+            uint8_t numPipeFromStatus = (status >> 1) & 0x07;
+
+            //if data from new pipe
+            if(NRF_ConnectedDevice < numPipeFromStatus)
+            {
+                NRF_ConnectedDevice++;
+                ESP_LOGI("NRF", "add new pipe done %d", NRF_ConnectedDevice);
+                //save to flash maybe
+            }
+
+            ESP_LOGI("NRF", "pipe:%d status = %d", numPipeFromStatus, status);
+            for(int i = 0; i < 8; i++)
+            {
+                ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
+            }
+        }
+//        writeData(buffTx, 8);
+
+    }
+    //E8E8F0F0E2
+    vTaskDelete(NULL);
+}
 
 void nRF24_task(void *pvParameters)
 {
@@ -401,26 +503,17 @@ void nRF24_task(void *pvParameters)
         .cs_io_num = GPIO_NRF_CS,
         .ce_io_num = GPIO_NRF_CE
     };
-//    nrf24_t dev;
-//    nrf24_init(&dev, VSPI_HOST, GPIO_SPI_MOSI, GPIO_SPI_MISO, GPIO_SPI_CLK, GPIO_NRF_CE, GPIO_NRF_CS);
     NRF_Init(rf24_bus_cfg);
+    const uint64_t pipe0 = 0xE8E8F0F0E0LL;  //идентификатор трубы с номером 1
     const uint64_t pipe1 = 0xE8E8F0F0E2LL;  //идентификатор трубы с номером 1
     ////////////// SET ////////////////
-//    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
-//    uint8_t tmp = 0;
-//    nrf24_set_register(&dev, NRF24_REG_EN_AA, &tmp, 1);
+    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
     setAutoAck(false); //отключаем автоответе
-//    nrf24_set_register(&dev, NRF24_REG_FEATURE, &tmp, 1);
-//    nrf24_set_register(&dev, NRF24_REG_DYNPD, &tmp, 1);
     disableDynamicPayloads(); //отключаем динамический размер нагрузки
     //disableCRC();
-//    nrf24_set_payload_length(&dev, 8);
     setPayloadSize(8); //размер нагрузки 8 байт
-//    nrf24_set_rf_channel(&dev, 100);
     setChannel(100); //канал 19
-////    openWritingPipe(pipe1); //открываем трубу с номером 1
-//    nrf24_set_rx_address(&dev, NRF24_P1, &pipe1, 8);
-//    nrf24_enable_rx_pipe(&dev, NRF24_P1);
+    openReadingPipe(0, pipe0); //открываем трубу с номером 1
     openReadingPipe(1, pipe1); //открываем трубу с номером 1
 
     startListening();
@@ -429,6 +522,7 @@ void nRF24_task(void *pvParameters)
     uint8_t buff[8] = {0};
 //    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
     int status;
+    uint8_t numReadPype;
 ////    int i = 0;
 
 //    while(1) {vTaskDelay(1000/portTICK_RATE_MS);}
@@ -436,54 +530,20 @@ void nRF24_task(void *pvParameters)
     while(1)
     {
         vTaskDelay(1000/portTICK_RATE_MS);
-        if(!availableMy())
-//        if(nrf24_get_data_available(&dev))
+        if(!available(&numReadPype))
         {
-//            i++;
-//            if(i == 100)
-//            {
-//                i = 0;
-//                status = get_status();
-//                ESP_LOGI("nrf", "status = %d", status);
-//            }
-//            continue;
         }
         else
         {
-//            nrf24_get_data(&dev, buff, 8);
             status = read_payload(buff, 8);
-//            write_register(NRF_STATUS, (1 << RX_DR) | (1 << MAX_RT) | (1 << TX_DS));
-            ESP_LOGI("nrf", "status = %d", status);
+            uint8_t numPipeFromStatus = (status >> 1) & 0x07;
+            ESP_LOGI("nrf", "%d;%d;:status = %d", numReadPype, numPipeFromStatus, status);
             for(int i = 0; i < 8; i++)
             {
                 ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
             }
         }
-//        vTaskDelay(2500/portTICK_RATE_MS);
-//        writeData(buffTx, 8);
-
     }
-//    //E8E8F0F0E2
-//    uint8_t addr[5] = {0xE8, 0xE8, 0xF0, 0xF0, 0xE2};
-//    uint8_t buff[32] = {0};
-//    nrf_init(GPIO_NRF_CE, GPIO_NRF_CS, PIN_NUM_CLK, PIN_NUM_MOSI, PIN_NUM_MISO, nrf_rx_mode);
-//    nrf_set_pipe_addr(0, addr, 5);
-//    ESP_LOGI("nrf", "Rx mode\n");
-//    for(;;) {
-//        vTaskDelay(10/portTICK_RATE_MS);
-
-
-////        ESP_LOGI("nrf", "wait Rx data\n");
-
-//        if (!nrf_is_rx_data_available())
-//            continue;
-
-//        nrf_read(buff, 8);
-//        ESP_LOGI("nrf", "Received: ");
-//        for(int i = 0; i < 8; i++)
-//             ESP_LOGI("nrf", "%d ", buff[i]);
-//        ESP_LOGI("nrf", "\n");
-//    }
     vTaskDelete(NULL);
 }
 
@@ -743,7 +803,7 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 4096*4, NULL, 1, NULL);
+//    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 4096*1, NULL, 1, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
