@@ -42,10 +42,6 @@
 #define MAX_TEMP            +50
 
 //range data color
-#define CO2_BEGIN_RED       2500
-#define CO2_BEGIN_ORANG     1900
-#define CO2_BEGIN_YELLOW    1000
-
 #define TEMP_COMFORT_MIN    16
 #define TEMP_COMFORT_MAX    26
 
@@ -135,7 +131,7 @@ static lv_obj_t * ledWifi2;
 static lv_obj_t * displayMain3;
 static lv_obj_t * meterCo23, * meterHumidity3, * meterTemperature3;
 static lv_meter_indicator_t * indicCo23, * indicHumidity3, * indicTemperature3;
-static lv_obj_t * labelCo23, * labelHumidity3, * labelTemperatre3, * labelPressure3;
+static lv_obj_t * labelCo23, * labelHumidity3, * labelTemperatre3/*, * labelPressure3*/;
 
 //4 display
 static lv_obj_t * displayMain4;

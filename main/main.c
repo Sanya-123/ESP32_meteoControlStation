@@ -298,8 +298,8 @@ void taskButton(void *p)
         if(oldBleft != Bleft)
         {
             oldBleft = Bleft;
-            ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
-            gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
+//            ESP_LOGI("BUTTON", "left if %s", Bleft ? "DOWN" : "UP");
+//            gpio_set_level(GPIO_LED_GREEN, Bleft ? 1 : 0);
             meteoButtonClicked(ButtonPrev, Bleft ? ButtonPresed : ButtonRealesed);
             if(!Bleft)
             {
@@ -310,8 +310,8 @@ void taskButton(void *p)
         if(oldBright != Bright)
         {
             oldBright = Bright;
-            ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
-            gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
+//            ESP_LOGI("BUTTON", "right if %s", Bright ? "DOWN" : "UP");
+//            gpio_set_level(GPIO_LED_YELLOW, Bright ? 1 : 0);
             meteoButtonClicked(ButtonNext, Bright ? ButtonPresed : ButtonRealesed);
             if(!Bright)
             {
@@ -328,8 +328,8 @@ void taskButton(void *p)
         if(oldBmenu != Bmenu)
         {
             oldBmenu = Bmenu;
-            ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
-            gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
+//            ESP_LOGI("BUTTON", "menu if %s", Bmenu ? "DOWN" : "UP");
+//            gpio_set_level(GPIO_LED_ORANGE, Bmenu ? 1 : 0);
             meteoButtonClicked(ButtonSettings, Bmenu ? ButtonPresed : ButtonRealesed);
 //            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bmenu ? 10.0 : 0.0);
@@ -338,8 +338,8 @@ void taskButton(void *p)
         if(oldBback != Bback)
         {
             oldBback = Bback;
-            ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
-            gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
+//            ESP_LOGI("BUTTON", "back if %s", Bback ? "DOWN" : "UP");
+//            gpio_set_level(GPIO_LED_RED, Bback ? 1 : 0);
             meteoButtonClicked(ButtonAction, Bback ? ButtonPresed : ButtonRealesed);
 //            gpio_set_level(GPIO_BUZZ_ON, Bback ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bback ? 10.0 : 0.0);
@@ -377,10 +377,14 @@ void task_co2(void *p)
         co2_read();
         //vTaskDelay(240000/portTICK_RATE_MS);
 //        for(int i = 0; i < 60; i++)
+        gpio_set_level(GPIO_LED_GREEN, 1);
         while(1)
         {
             co2Val = co2_read();
             ESP_LOGI("CO2", "CO2 %d", co2Val);
+            gpio_set_level(GPIO_LED_YELLOW, co2Val >= CO2_BEGIN_YELLOW);
+            gpio_set_level(GPIO_LED_ORANGE, co2Val >= CO2_BEGIN_ORANG);
+            gpio_set_level(GPIO_LED_RED, co2Val >= CO2_BEGIN_RED);
             vTaskDelay(60000/portTICK_RATE_MS);
         }
         gpio_set_level(GPIO_EN_CO2, 0);
@@ -390,7 +394,7 @@ void task_co2(void *p)
 }
 
 //extern spi_bus_config_t buscfg;
-void addNewNRF()
+void addNewNRF(void)
 {
     ESP_LOGI("NRF", "Add new dev");
     uint8_t buffTx[8] = {0};
@@ -407,7 +411,7 @@ void nRF24_new_task(void *pvParameters)
     const uint64_t pipeWrite = 0xE8E8E8E8E8LL;  //идентификатор трубы от ControlStation до внешнего модуля
     const uint64_t pipeGlovabal = 0xE8E8F0F0E2LL;  //обший идентификатор трубы
     //read id
-    uint8_t chipid[6];
+    uint8_t chipid[8];
     esp_efuse_mac_get_default(chipid);
     uint64_t chipid64 = 0;
     memcpy(&chipid64, chipid, 6);
@@ -439,6 +443,7 @@ void nRF24_new_task(void *pvParameters)
     //disableCRC();
     setPayloadSize(8); //размер нагрузки 8 байт
     setChannel(100); //канал 100
+    maskIRQ(true, true, false);//enable inly rx interupt
     openWritingPipe(pipeWrite);
 
     openReadingPipe(0, pipeGlovabal); //открываем трубу с номером 0
@@ -452,20 +457,30 @@ void nRF24_new_task(void *pvParameters)
 //    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
     int status;
 
+    ESP_LOGI("NRF", "add ext fnction");
     setAddExternal(addNewNRF);//set function on add button
+
+    //init gpio interupt
+    gpio_set_direction(GPIO_NRF_IRQ, GPIO_MODE_INPUT);
+    gpio_pulldown_en(GPIO_NRF_IRQ);
+    gpio_pullup_dis(GPIO_NRF_IRQ);
 
     while(1)
     {
-        vTaskDelay(1000/portTICK_RATE_MS);
-        if(!availableMy())
+        vTaskDelay(10/portTICK_RATE_MS);
+        if(gpio_get_level(GPIO_NRF_IRQ))//if set 1 rx is empty
+            continue;
+//        if(!availableMy())
+//        {
 
-        {
-
-        }
-        else
+//        }
+//        else
+        ESP_LOGI("NRF", "ststus change");
+        if(availableMy())
         {
             status = read_payload(buff, 8);
             uint8_t numPipeFromStatus = (status >> 1) & 0x07;
+            whatHappened();//clear status
 
             //if data from new pipe
             if(NRF_ConnectedDevice < numPipeFromStatus)
@@ -480,70 +495,15 @@ void nRF24_new_task(void *pvParameters)
             {
                 ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
             }
+            //TODO convet input data
+            //write it in display
         }
+        else
+            whatHappened();//clear status
 //        writeData(buffTx, 8);
 
     }
     //E8E8F0F0E2
-    vTaskDelete(NULL);
-}
-
-void nRF24_task(void *pvParameters)
-{
-    vTaskDelay(1000/portTICK_RATE_MS);
-    (void)pvParameters;
-
-
-    rf24_bus_cfg_t rf24_bus_cfg = {
-        .spi_host = VSPI_HOST,
-        .init_host = false,
-        .mosi_io_num = GPIO_SPI_MOSI,
-        .miso_io_num = GPIO_SPI_MISO,
-        .sclk_io_num = GPIO_SPI_CLK,
-        .cs_io_num = GPIO_NRF_CS,
-        .ce_io_num = GPIO_NRF_CE
-    };
-    NRF_Init(rf24_bus_cfg);
-    const uint64_t pipe0 = 0xE8E8F0F0E0LL;  //идентификатор трубы с номером 1
-    const uint64_t pipe1 = 0xE8E8F0F0E2LL;  //идентификатор трубы с номером 1
-    ////////////// SET ////////////////
-    //enableAckPayload(); //отключаем полезную нагрузку в автоответе
-    setAutoAck(false); //отключаем автоответе
-    disableDynamicPayloads(); //отключаем динамический размер нагрузки
-    //disableCRC();
-    setPayloadSize(8); //размер нагрузки 8 байт
-    setChannel(100); //канал 19
-    openReadingPipe(0, pipe0); //открываем трубу с номером 1
-    openReadingPipe(1, pipe1); //открываем трубу с номером 1
-
-    startListening();
-    ///////////////////////////////////
-
-    uint8_t buff[8] = {0};
-//    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
-    int status;
-    uint8_t numReadPype;
-////    int i = 0;
-
-//    while(1) {vTaskDelay(1000/portTICK_RATE_MS);}
-
-    while(1)
-    {
-        vTaskDelay(1000/portTICK_RATE_MS);
-        if(!available(&numReadPype))
-        {
-        }
-        else
-        {
-            status = read_payload(buff, 8);
-            uint8_t numPipeFromStatus = (status >> 1) & 0x07;
-            ESP_LOGI("nrf", "%d;%d;:status = %d", numReadPype, numPipeFromStatus, status);
-            for(int i = 0; i < 8; i++)
-            {
-                ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
-            }
-        }
-    }
     vTaskDelete(NULL);
 }
 
@@ -804,11 +764,11 @@ void app_main(void)
 
 
 //    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 4096*1, NULL, 1, NULL);
+//    xTaskCreate(nRF24_new_task, "nrf", 4096, NULL, 2, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-//    xTaskCreate(nRF24_task, "nrf", 4096, NULL, 1, NULL);
 //    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
 
 

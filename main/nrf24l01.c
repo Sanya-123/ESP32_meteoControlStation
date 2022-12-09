@@ -81,7 +81,7 @@ void ce(uint8_t level)
 uint8_t read_register(uint8_t reg)
 {
     uint8_t addr = R_REGISTER | (REGISTER_MASK & reg);
-    uint8_t dt = 0;
+//    uint8_t dt = 0;
 
 
     uint8_t rxData;
@@ -202,7 +202,7 @@ uint8_t write_payload(const void* buf, uint8_t data_len, const uint8_t writeType
 uint8_t read_payload(void* buf, uint8_t data_len)
 {
     uint8_t status = 0;
-    uint8_t* current = (uint8_t*)buf;
+//    uint8_t* current = (uint8_t*)buf;
 
     if(data_len > payload_size)
     {
@@ -277,7 +277,7 @@ uint8_t getPayloadSize(void)
 uint8_t NRF_Init(rf24_bus_cfg_t bus)
 {
 
-    ESP_LOGV("NRF", "rf24_init");
+    ESP_LOGI("NRF", "rf24_init");
 
     esp_err_t ret = ESP_OK;
 
@@ -308,7 +308,7 @@ uint8_t NRF_Init(rf24_bus_cfg_t bus)
         .queue_size = 8
     };
 
-    ESP_LOGV("NRF", "rf24_init: spi_bus_add_device");
+    ESP_LOGI("NRF", "rf24_init: spi_bus_add_device");
     spi_device_handle_t spi_dev;
     ret = spi_bus_add_device(bus.spi_host, &spi_devcfg, &spi_dev);
 
@@ -494,7 +494,7 @@ bool TX_Pack(const void* buf, uint8_t len)
     //write_register(NRF_CONFIG, regval);
     //delay_us(150);
 
-    const uint8_t* current = (const uint8_t*)buf;
+//    const uint8_t* current = (const uint8_t*)buf;
     uint8_t addr = W_TX_PAYLOAD_NO_ACK;
 
     uint8_t txData[DEFOULT_BUFF_NRF_SIZE];

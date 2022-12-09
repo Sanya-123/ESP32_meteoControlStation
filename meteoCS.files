@@ -31,12 +31,8 @@ main/mh-z19.h
 main/net.c
 main/net.h
 main/nrf24l01.c
-main/nrf24l01.h
-main/nrf24l01_hal.h
 main/openWeather.c
 main/openWeather.h
-main/tft.c
-main/tft.h
 main/tjpgd.c
 main/tjpgd.h
 main/uart2.c

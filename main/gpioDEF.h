@@ -17,6 +17,7 @@
 
 #define GPIO_NRF_CE         4
 #define GPIO_NRF_CS         2
+#define GPIO_NRF_IRQ        14
 
 #define GPIO_LED_GREEN      32
 #define GPIO_LED_YELLOW     33

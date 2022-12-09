@@ -28,6 +28,11 @@ extern "C" {
 #define SIZE_FORCAST            4 /*size Forcast eather*/
 #define STEP_FORCAST_HOUR       5
 
+//range data color
+#define CO2_BEGIN_RED           2500
+#define CO2_BEGIN_ORANG         1900
+#define CO2_BEGIN_YELLOW        1000
+
 /**********************
  *      TYPEDEFS
  **********************/
