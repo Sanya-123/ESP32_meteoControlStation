@@ -47,7 +47,7 @@ menu "control stationconfig"
 
     config ESP_DPP_DEVICE_INFO
         string "Additional Device Info"
-        default "esp32"
+        default "ControlStation"
         help
             Additional ancillary information to be included in QR Code.
 
