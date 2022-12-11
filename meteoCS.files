@@ -22,6 +22,8 @@ main/esp_request/include/req_list.h
 main/esp_request/include/uri_parser.h
 main/esp_request/req_list.c
 main/esp_request/uri_parser.c
+main/flash.c
+main/flash.h
 main/gpioDEF.h
 main/ipgeolocation.c
 main/ipgeolocation.h

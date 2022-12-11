@@ -21,6 +21,12 @@ menu "control stationconfig"
         default 5
         help
             Set the Maximum retry to avoid station reconnecting to the AP unlimited when the AP is really inexistent.
+            
+    config DOUBLE_DIPLAY_BUFFER
+        bool "double display buffer"
+        default n
+        help
+            Use 2 bufer for LVGL display
 
     config MQTT_SERVER
         string "MQTT server"

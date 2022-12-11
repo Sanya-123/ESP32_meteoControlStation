@@ -70,7 +70,9 @@ void guiTask(void *pvParameter)
     /* A task should NEVER return */
     free(buf1);
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
+#if CONFIG_DOUBLE_DIPLAY_BUFFER
     free(buf2);
+#endif
 #endif
     vTaskDelete(NULL);
 }
@@ -89,8 +91,12 @@ void initDisplay()
 
     /* Use double buffered when not working with monochrome displays */
 #ifndef CONFIG_LV_TFT_DISPLAY_MONOCHROME
-//    buf2 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
-//    assert(buf2 != NULL);
+#if CONFIG_DOUBLE_DIPLAY_BUFFER
+    buf2 = heap_caps_malloc(DISP_BUF_SIZE * sizeof(lv_color_t), MALLOC_CAP_DMA);
+    assert(buf2 != NULL);
+#else
+    buf2 = NULL;
+#endif
 #else
     buf2 = NULL;
 #endif

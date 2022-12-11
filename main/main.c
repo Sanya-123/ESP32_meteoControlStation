@@ -43,6 +43,7 @@
 #include "mqtt_client.h"
 
 #include "display_gui.h"
+#include "flash.h"
 
 #define WHEATHER_DAYS_READ      SIZE_FORCAST
 #define WHEATHER_HOUR_READ      STEP_FORCAST_HOUR*SIZE_FORCAST
@@ -421,7 +422,7 @@ void nRF24_new_task(void *pvParameters)
     localPipe = chipid64 << 8;
     //localPipe_n = {localPipe[40:8], n} == localPipe + n == localPipe | n;
 //    uint64_t NRF
-    NRF_ConnectedDevice = 0;//Read from mem
+    NRF_ConnectedDevice = getExtDeviceSize();
 
 
 
@@ -739,6 +740,7 @@ void app_main(void)
     esp_log_level_set("MQTT_CLIENT", ESP_LOG_NONE);
 
     initOutGPIO();
+    initFlash();
 
 
 //    esp_log_level_set("CO2", ESP_LOG_VERBOSE);
@@ -754,6 +756,7 @@ void app_main(void)
 //    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
     xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 1, NULL);
     ESP_LOGI("Dislay", "Drow display");
+    setSaveConfig(saveGuiSittings);
 
     vTaskDelay(1000);
 
@@ -800,8 +803,16 @@ void app_main(void)
 //    nvs_flash_erase();
 //    nvs_flash_erase_partition("espwifimgr");
 
+    //wayi total init display
     vTaskDelay(3000);//delay before start becouse net use display
                     //so i need wait before load all display
+    SettignDisplay savedSittings;
+    if(getGuiSittings(&savedSittings))//if read parameters
+    {
+        ESP_LOGI("Dislay", "OK get setting");
+        loadConfig(savedSittings);
+    }
+
     ESP_LOGI(TAG, "Start wifi manager");
     startNet();
 
