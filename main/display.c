@@ -11,6 +11,7 @@
 #include "lvgl_helpers.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "csevent.h"
 
 //#include "lv_demo_widgets.h"
 //#include "lv_ex_get_started.h"
@@ -55,6 +56,9 @@ void guiTask(void *pvParameter)
     if(pvParameter != NULL)
         application();
 //    vTaskDelay(pdMS_TO_TICKS(1000));
+
+    lv_task_handler();//include once for drow display mau be include afre
+    sendEvent(EVENT_DISPLAY_INIT_DONE);
 
     while (1) {
         /* Delay 1 tick (assumes FreeRTOS tick is 10ms */

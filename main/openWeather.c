@@ -149,8 +149,6 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
     }
 }
 
-//extern EventGroupHandle_t s_wifi_event_group;
-
 static int download_callback(request_t *req, char *data, int len)
 {
     (void)len;
@@ -199,8 +197,6 @@ void setLocation(char *_city, char *_countryCode, float _lat, float _lon)
 int initOpenWeather()
 {
     xSemaphoreDataIsGet = xSemaphoreCreateBinary();
-//    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
-//    ESP_LOGI(TAG, "Connected to AP, freemem=%d",esp_get_free_heap_size());
     // vTaskDelay(1000/portTICK_RATE_MS);
 //    req = req_new("http://httpbin.org/post");
     //or

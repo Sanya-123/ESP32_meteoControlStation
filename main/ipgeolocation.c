@@ -69,7 +69,13 @@ void parsetLocation(cJSON * root, IpLocation *location)
     cJSON *_lon = cJSON_GetObjectItem(root, "longitude");
     cJSON *_time = cJSON_GetObjectItem(cJSON_GetObjectItem(root, "timezone"), "current_time");
 
-    char *valString = cJSON_GetStringValue(_country_code);
+    char *valString;
+
+    valString = cJSON_GetStringValue(cJSON_GetObjectItem(root, "ip"));
+    if(valString)
+        ESP_LOGI("location", "IP:%s", valString);
+
+    valString = cJSON_GetStringValue(_country_code);
     if(valString)
         memcpy(location->country_code, valString, 2);
 

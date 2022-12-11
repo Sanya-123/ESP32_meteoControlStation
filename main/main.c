@@ -44,6 +44,7 @@
 
 #include "display_gui.h"
 #include "flash.h"
+#include "csevent.h"
 
 #define WHEATHER_DAYS_READ      SIZE_FORCAST
 #define WHEATHER_HOUR_READ      STEP_FORCAST_HOUR*SIZE_FORCAST
@@ -508,14 +509,13 @@ void nRF24_new_task(void *pvParameters)
     vTaskDelete(NULL);
 }
 
-extern EventGroupHandle_t s_wifi_event_group;
 OpenWeather weatherCurent, weatherDayli[WHEATHER_DAYS_READ], weatherHourly[WHEATHER_HOUR_READ];
 
-void locationAndWeatherTask(void *p)
+void locationTask(void *p)
 {
     (void)p;
 
-    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
+    while(!waiEventyCS(EVENT_WIFI_CONNECT_STA, portMAX_DELAY)) {}
 
     //get time and location
     IpLocation location;
@@ -551,13 +551,26 @@ void locationAndWeatherTask(void *p)
     //set location for openweather
     setLocation(location.city, location.country_code, location.lat, location.lon);
 
+    sendEvent(EVENT_LOCATION_GET);
+
+    vTaskDelete(NULL);
+}
+
+void weatherTask(void *p)
+{
+    (void)p;
+    time_t _now;
+    struct tm* localtm;
+
+    while(!waiEventyCS(EVENT_WIFI_CONNECT_STA, portMAX_DELAY)) {}
+
+    while(!waiEventyCS(EVENT_LOCATION_GET, portMAX_DELAY)) {}
+
     if(initOpenWeather() != 0)
     {
         ESP_LOGI("weather", "location is not sets");
         vTaskDelete(NULL);
     }
-
-
 
     while(1)
     {
@@ -668,7 +681,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
 void task_MQTT(void *p)
 {
-    while(xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT, false, true, portMAX_DELAY) != pdTRUE) {};
+    while(!waiEventyCS(EVENT_WIFI_CONNECT_STA, portMAX_DELAY)) {}
 
     vTaskDelay(10000/portTICK_RATE_MS);
     ESP_LOGI("MQTT", "begin MQTT");
@@ -741,6 +754,7 @@ void app_main(void)
 
     initOutGPIO();
     initFlash();
+    initGroupCSevent();
 
 
 //    esp_log_level_set("CO2", ESP_LOG_VERBOSE);
@@ -750,15 +764,17 @@ void app_main(void)
 //    esp_log_level_set("CO2", ESP_LOG_ERROR);
 
 
-    s_wifi_event_group = xEventGroupCreate();
 //    semaphoreDisplayChange = xSemaphoreCreateBinary();
 //    semaphoreDisplayNextState = xSemaphoreCreateBinary();
 //    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
     xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 1, NULL);
-    ESP_LOGI("Dislay", "Drow display");
     setSaveConfig(saveGuiSittings);
 
-    vTaskDelay(1000);
+//    vTaskDelay(1000);
+
+    //wayi total init display
+    waiEventyCS(EVENT_DISPLAY_INIT_DONE, 4000);
+    ESP_LOGI("Dislay", "Drow display");
 
 //    ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
 //    ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
@@ -766,7 +782,8 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-//    xTaskCreate(locationAndWeatherTask, "openWeathre_location", 4096*1, NULL, 1, NULL);
+    xTaskCreate(locationTask, "location", 4096, NULL, 1, NULL);
+    xTaskCreate(weatherTask, "openWeathre", 4096*1, NULL, 1, NULL);
 //    xTaskCreate(nRF24_new_task, "nrf", 4096, NULL, 2, NULL);
     xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
@@ -803,9 +820,9 @@ void app_main(void)
 //    nvs_flash_erase();
 //    nvs_flash_erase_partition("espwifimgr");
 
-    //wayi total init display
-    vTaskDelay(3000);//delay before start becouse net use display
-                    //so i need wait before load all display
+//    //wayi total init display
+//    vTaskDelay(3000);//delay before start becouse net use display
+//                    //so i need wait before load all display
     SettignDisplay savedSittings;
     if(getGuiSittings(&savedSittings))//if read parameters
     {

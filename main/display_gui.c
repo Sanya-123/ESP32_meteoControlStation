@@ -438,6 +438,7 @@ void loadConfig(SettignDisplay setings)
 
     lv_event_send(switchTimerEn, LV_EVENT_VALUE_CHANGED, NULL);
     lv_event_send(switchPressure, LV_EVENT_VALUE_CHANGED, NULL);
+    lv_event_send(switchTheme, LV_EVENT_VALUE_CHANGED, NULL);
 
     if(setings.style >= STYLE_SIZE)
         setings.style = STYLE_SIZE - 1;

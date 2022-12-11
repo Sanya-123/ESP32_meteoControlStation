@@ -12,6 +12,8 @@ main/cJSON/cJSON.h
 main/cJSON/cJSON_Utils.c
 main/cJSON/cJSON_Utils.h
 main/component.mk
+main/csevent.c
+main/csevent.h
 main/decode_image.c
 main/decode_image.h
 main/display.c

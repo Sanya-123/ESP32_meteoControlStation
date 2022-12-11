@@ -34,14 +34,14 @@
 #include "wifi_manager.h"
 #include "display_gui.h"
 
+#include "csevent.h"
+
 #define CURVE_SEC256R1_PKEY_HEX_DIGITS      64
 
 extern const char *TAG;
 
 extern int reciveSMD(char *rx, char *tx, int n);
 
-/* FreeRTOS event group to signal when we are connected*/
-EventGroupHandle_t s_wifi_event_group;
 char qrcodeAP[256];
 char qrcodeURL[256];
 char str_ip[IP4ADDR_STRLEN_MAX];
@@ -218,7 +218,7 @@ void wifi_connect_to_ap(void *arg)
     esp_ip4addr_ntoa(&ip4, str_ip, IP4ADDR_STRLEN_MAX);
     ESP_LOGI("WIFI", "IP:%s", str_ip);
 
-    xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+    sendEvent(EVENT_WIFI_CONNECT_STA);
     setWifiConnect(true);
     setEnableQrPage(false);
     setIPdev(str_ip);
