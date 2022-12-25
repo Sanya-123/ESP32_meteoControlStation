@@ -221,6 +221,7 @@ uint8_t getExtDeviceSize()
         {
             ESP_LOGW("flash", "Couldn't get extconnections");
             data = 0;
+            nvs_set_u8(handle, "extconnections", data);
         }
         else
             ESP_LOGI("flash", "extconnections is %d", data);

@@ -3,6 +3,8 @@
 
 #include "lvgl.h"
 
+#define WETAHER_IMAGE_SIZES     40
+
 
 struct WEATHER
 {
@@ -16,6 +18,6 @@ struct LV_WEATHER
     const lv_img_dsc_t * img_dsc;
 };
 
-extern const struct LV_WEATHER lv_weather[40];
+extern const struct LV_WEATHER lv_weather[WETAHER_IMAGE_SIZES];
 
 #endif

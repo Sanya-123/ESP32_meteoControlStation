@@ -13,7 +13,6 @@
 #include "../lvgl/lvgl.h"
 #endif
 
-//TODO use my
 #include "images.h"
 
 
@@ -328,7 +327,7 @@ void drowDisplayLVGL(void)
 
     //create timer for change display
     timerNextDisplay = lv_timer_create(timer_event_cb, timeOnDisplay[0]*1000, NULL);
-    lv_timer_pause(timerNextDisplay);//TODO temp
+//    lv_timer_pause(timerNextDisplay);//enable on debug
 
     displayQRcode = lv_tileview_add_tile(tl, 0, 2, LV_DIR_NONE);
     qrCodePage_create(displayQRcode);
@@ -587,22 +586,22 @@ void setPressure(int val)
 
 void setTime(int h, int m)
 {
-    lv_label_set_text_fmt(labelTime, "%d:%d", h, m);
+    lv_label_set_text_fmt(labelTime, "%02d:%02d", h, m);
 
-    lv_label_set_text_fmt(labelTime2, "%d:%d", h, m);
+    lv_label_set_text_fmt(labelTime2, "%02d:%02d", h, m);
 
-    lv_label_set_text_fmt(labelTime4, "%d:%d", h, m);
+    lv_label_set_text_fmt(labelTime4, "%02d:%02d", h, m);
 
-    lv_label_set_text_fmt(wTime, "%d:%d", h, m);
+    lv_label_set_text_fmt(wTime, "%02d:%02d", h, m);
 }
 
 void setDate(int d, int m, int y)
 {
-    lv_label_set_text_fmt(labelDate, "%d.%d.%d", d, m, y);
+    lv_label_set_text_fmt(labelDate, "%02d.%02d.%04d", d, m, y);
 
-    lv_label_set_text_fmt(labelDate2, "%d.%d.%d", d, m, y);
+    lv_label_set_text_fmt(labelDate2, "%02d.%02d.%04d", d, m, y);
 
-    lv_label_set_text_fmt(labelDate4, "%d.%d.%d", d, m, y);
+    lv_label_set_text_fmt(labelDate4, "%02d.%02d.%04d", d, m, y);
 }
 
 void setWifiConnect(bool ok)
@@ -709,7 +708,8 @@ void setWeatherCurentHummidity(int hum)
 
 void setWeatherCurentPicture(int num)
 {
-    lv_img_set_src(wMainImage, lv_weather[num].img_dsc);
+    if(num < WETAHER_IMAGE_SIZES)
+        lv_img_set_src(wMainImage, lv_weather[num].img_dsc);
 }
 
 void setWeatherUpdateTime(int h, int m)
@@ -729,7 +729,8 @@ void setForcastHPicture(unsigned int f, int num)
 {
     if(f < SIZE_FORCAST)
     {
-        lv_img_set_src(wForcastHImage[f], lv_weather[num].img_dsc);
+        if(num < WETAHER_IMAGE_SIZES)
+            lv_img_set_src(wForcastHImage[f], lv_weather[num].img_dsc);
     }
 }
 
@@ -745,7 +746,8 @@ void setForcastDPicture(unsigned int f, int num)
 {
     if(f < SIZE_FORCAST)
     {
-        lv_img_set_src(wForcastDImage[f], lv_weather[num].img_dsc);
+        if(num < WETAHER_IMAGE_SIZES)
+            lv_img_set_src(wForcastDImage[f], lv_weather[num].img_dsc);
     }
 }
 
@@ -1091,19 +1093,17 @@ static void switchTimer_event_cb(lv_event_t * e)
     if(lv_obj_has_state(sw, LV_STATE_CHECKED))
     {
         lv_timer_set_cb(timerNextDisplay, timer_event_cb);
-//        lv_timer_enable(true);//TODO only for 1 timer
     }
     else
     {
         lv_timer_set_cb(timerNextDisplay, NULL);
-//        lv_timer_enable(false);//TODO only for 1 timer
     }
 }
 
 static void switchPressure_event_cb(lv_event_t * e)
 {//TODO change curent value
 //    lv_obj_t * sw = lv_event_get_target(e);
-
+    (void)e;
 //    pressurePring = lv_obj_has_state(sw, LV_STATE_CHECKED);
     setPressure(-1);
 

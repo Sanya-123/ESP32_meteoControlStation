@@ -69,9 +69,10 @@ typedef struct
 void setLocation(char *_city, char *_countryCode, float _lat, float _lon);
 int initOpenWeather();
 int askWeather(OpenWeather *veather);
-//int askWeatherDayly(OpenWeather *veather);
+int askWeatherDayly(OpenWeather *veather);
 int askWeatherOneCall(OpenWeather *current, OpenWeather *dayly, int days, OpenWeather *hourly, int houres);
 void printOpenWeather(OpenWeather weather);
-Image getImageWheather(OpenWeather weather, bool big);
-Image getWind(int deg);
+int getImageGuiWheather(OpenWeather weather);
+//Image getImageWheather(OpenWeather weather, bool big);
+//Image getWind(int deg);
 

@@ -15,6 +15,7 @@
 static request_t *req;
 char requeSendData[300] = {0};
 char requeSendDataForcastDayly[300] = {0};
+char requeSendDataForcastHourly[300] = {0};
 char requeSendDataOneCall[300] = {0};
 //char requeSendDataForcastTime[300] = {0};
 static cJSON *root = NULL;
@@ -24,6 +25,152 @@ static SemaphoreHandle_t xSemaphoreDataIsGet;
 char city[128] = {0};
 char countryCode[3] = {0};
 static float lat = 0, lon = 0;
+uint8_t oneCall_step = 5, oneCall_size = 4, oneCall_offset = 4 + 5;
+
+int cutDataOpenWeatherH(char *data, int sizeData, uint8_t step, uint8_t size, uint8_t offset)
+{
+    char *pointCut;
+    int curentSize = sizeData;
+
+    char *pointBegin = strstr(data, "\"hourly\":");
+
+    pointCut = strstr(pointBegin, "{\"dt\":");
+
+    for(int i = 0; i < offset; i++)//+
+    {//remove ferst
+        char *pointNext = strstr(pointCut + 1, "{\"dt\":");
+        int ledtSize = curentSize - (pointNext - data);
+        memcpy(pointCut, pointNext, ledtSize);
+        curentSize -= pointNext - pointCut;
+    }
+
+//    qDebug() << "here";
+
+    for(int i = 0; i < size; i++)
+    {//left just some
+        pointCut = strstr(pointCut + 1, "{\"dt\":");
+        char *pointNext = pointCut;
+        for(int j = 0; j < (step - 1); j++)
+            pointNext = strstr(pointNext + 1, "{\"dt\":");//remove steps data
+
+        int ledtSize = curentSize - (pointNext - data);
+        memcpy(pointCut, pointNext, ledtSize);
+        curentSize -= pointNext - pointCut;
+    }
+
+    //remove last
+    pointCut = strstr(pointBegin, "{\"dt\":");
+    for(int i = 0; i < size; i++)
+    {//left just some
+        pointCut = strstr(pointCut + 1, ",{\"dt\":");
+    }
+    char *pointNext = strstr(pointCut + 1, "],\"daily\":");
+    int ledtSize = curentSize - (pointNext - data);
+    memcpy(pointCut, pointNext, ledtSize);
+    curentSize -= pointNext - pointCut;
+
+    //cut days maybe
+
+    return curentSize;
+}
+
+static int download_callback(request_t *req, char *data, int len)
+{
+    (void)len;
+    static char *downloadData = NULL;
+    static int totalRecive = 0;
+    static int totalWaytData = 0;
+
+    req_list_t *found = req->response->header;
+    while(found->next != NULL) {
+        found = found->next;
+        ESP_LOGI("HTTP","Response header %s:%s", (char*)found->key, (char*)found->value);
+    }
+    //or
+    found = req_list_get_key(req->response->header, "Content-Length");
+    if(found)
+    {
+        ESP_LOGI("HTTP","Get header %s:%s", (char*)found->key, (char*)found->value);
+        if(totalWaytData == 0)
+        {
+            totalWaytData = atoi((char*)found->value);
+            if(len < totalWaytData)//if rx data in several transaction
+            {
+                ESP_LOGI("HTTP", "Wayt anaouther paket %d", totalWaytData);
+                if(downloadData != NULL)//check if maloc
+                    free(downloadData);
+
+//                downloadData = malloc(totalWaytData + 16);
+                downloadData = heap_caps_malloc(totalWaytData + 16, MALLOC_CAP_IRAM_8BIT);
+                if(downloadData == NULL)
+                {
+                    ESP_LOGE("HTTP", "Error maloc");
+                }
+                totalRecive = 0;
+            }
+        }
+    }
+    else
+    {
+        totalRecive = 0;
+        totalWaytData = 0;
+        if(downloadData)
+            free(downloadData);
+        downloadData = NULL;
+    }
+    //len ~=500
+    ESP_LOGI("HTTP","LEN:%d", len);
+    ESP_LOGI("HTTP","*DATA:%s", data);
+    if(downloadData == NULL)//if wayt onli 1 packet
+    {
+        root = cJSON_Parse(data);
+        totalRecive = 0;
+        totalWaytData = 0;
+        ESP_LOGI("HTTP","OK cJSON_Parse");
+
+        xSemaphoreGive( xSemaphoreDataIsGet );
+    }
+    else
+    {
+        memcpy(downloadData + totalRecive, data, len);
+
+        totalRecive += len;
+
+        if(totalWaytData <= totalRecive)
+        {
+            ESP_LOGI("HTTP","Resive all");
+
+            int analizeSize = totalWaytData;
+            if(totalWaytData >= 15000)//if it is one call remove some data
+            {
+                analizeSize = cutDataOpenWeatherH(downloadData, totalWaytData, oneCall_step, oneCall_size, oneCall_offset);
+            }
+            downloadData[analizeSize] = '\0';
+            root = cJSON_ParseWithLength(downloadData, analizeSize);
+//            ESP_LOGI("JSON","data:%s", downloadData);
+
+            if(root == NULL)
+            {
+                ESP_LOGE("JSON","error parset data %d;;;", strlen(cJSON_GetErrorPtr()));
+            }
+//            ESP_LOGI("JSON","parse:%s", cJSON_Print(root));
+            totalRecive = 0;
+            totalWaytData = 0;
+            free(downloadData);
+            downloadData = NULL;
+
+            ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+            ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+            ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
+
+            ESP_LOGI("HTTP","OK cJSON_Parse");
+
+            xSemaphoreGive( xSemaphoreDataIsGet );
+        }
+    }
+
+    return 0;
+}
 
 void getWetharData(cJSON * root, OpenWeather *weather)
 {
@@ -79,6 +226,8 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
 //    cJSON *clouds = cJSON_GetObjectItem(root, "clouds");
 //    cJSON *sys = cJSON_GetObjectItem(root, "sys");
 
+//    ESP_LOGI("JSON","parse:%s", cJSON_Print(_daily));
+
     //weather
 //    cJSON *_weather_icon = cJSON_GetObjectItem(_weather, "icon");
     char *weatherIcon = cJSON_GetStringValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "icon"));
@@ -112,11 +261,13 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
     for(int i = 0; i < days; i++)
     {
         sprintf(iter, "%d", i);
-        day_hour = cJSON_GetObjectItem(_daily, iter);
+//        day_hour = cJSON_GetObjectItem(_daily, iter);
+        day_hour = cJSON_GetArrayItem(_daily, i);
         _temp = cJSON_GetObjectItem(day_hour, "temp");
         _weather = cJSON_GetObjectItem(day_hour, "weather");
         dayly[i].temp_min = cJSON_GetNumberValue(cJSON_GetObjectItem(_temp, "min")) - 273;
         dayly[i].temp_max = cJSON_GetNumberValue(cJSON_GetObjectItem(_temp, "max")) - 273;
+        dayly[i].temp = cJSON_GetNumberValue(cJSON_GetObjectItem(_temp, "eve")) - 273;
 
         char *weatherIcon = cJSON_GetStringValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "icon"));
         if(weatherIcon != NULL)
@@ -125,6 +276,8 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
         char *weatherMain = cJSON_GetStringValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "description"));
         if(weatherMain != NULL)
             memcpy(dayly[i].weatherName, weatherMain, strlen(weatherMain));
+
+        dayly[i].code = cJSON_GetNumberValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "id"));
 
         //NOTE параметров много возможно чтот еще нужно будет
     }
@@ -132,56 +285,24 @@ void getWetharOneCallData(cJSON * root, OpenWeather *current, OpenWeather *dayly
     for(int i = 0; i < houres; i++)
     {
         sprintf(iter, "%d", i);
-        day_hour = cJSON_GetObjectItem(_hourly, iter);
+//        day_hour = cJSON_GetObjectItem(_hourly, iter);
+        day_hour = cJSON_GetArrayItem(_hourly, i);
 //        _temp = cJSON_GetObjectItem(day_hour, "temp");
         _weather = cJSON_GetObjectItem(day_hour, "weather");
-        dayly[i].temp = cJSON_GetNumberValue(cJSON_GetObjectItem(day_hour, "temp"));
+        hourlu[i].temp = cJSON_GetNumberValue(cJSON_GetObjectItem(day_hour, "temp")) - 273;
 
         char *weatherIcon = cJSON_GetStringValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "icon"));
         if(weatherIcon != NULL)
-            memcpy(dayly[i].weatherIcon, weatherIcon, 3);
+            memcpy(hourlu[i].weatherIcon, weatherIcon, 3);
 
         char *weatherMain = cJSON_GetStringValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "description"));
         if(weatherMain != NULL)
-            memcpy(dayly[i].weatherName, weatherMain, strlen(weatherMain));
+            memcpy(hourlu[i].weatherName, weatherMain, strlen(weatherMain));
+
+        hourlu[i].code = cJSON_GetNumberValue(/*_weather_icon*/cJSON_GetObjectItem(cJSON_GetArrayItem(_weather, 0), "id"));
 
         //NOTE параметров много возможно чтот еще нужно будет
     }
-}
-
-static int download_callback(request_t *req, char *data, int len)
-{
-    (void)len;
-    req_list_t *found = req->response->header;
-    while(found->next != NULL) {
-        found = found->next;
-        ESP_LOGI("HTTP","Response header %s:%s", (char*)found->key, (char*)found->value);
-    }
-    //or
-    found = req_list_get_key(req->response->header, "Content-Length");
-    if(found) {
-        ESP_LOGI("HTTP","Get header %s:%s", (char*)found->key, (char*)found->value);
-    }
-    //len ~=500
-    ESP_LOGI("HTTP","*DATA:%s", data);
-    root = cJSON_Parse(data);
-    ESP_LOGI("HTTP","OK cJSON_Parse");
-
-    xSemaphoreGive( xSemaphoreDataIsGet );
-    //TODO еселать это и семафоры если за раз не будет приходиться вся посылка а это маловероятно
-//    if((sizeBuff + len) < SIZE_BUFFER_REQUEST)
-//    {
-//        memcpy(&buff[sizeBuff], data, len);
-//        sizeBuff += len;
-//    }
-//    else
-//    {
-//        memcpy(&buff[sizeBuff], data, SIZE_BUFFER_REQUEST - 1 - sizeBuff);
-//        sizeBuff = SIZE_BUFFER_REQUEST - 1;
-//    }
-
-//    buff[sizeBuff] = '\0';
-    return 0;
 }
 
 void setLocation(char *_city, char *_countryCode, float _lat, float _lon)
@@ -211,8 +332,9 @@ int initOpenWeather()
     char apikey[] = CONFIG_OPEN_WEATHER_API_KEY;
 //    float lat = 58.5, lon = 82.5;
     sprintf(requeSendData, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s", "weather", city, countryCode, apikey, "M", "EN");
-    sprintf(requeSendDataForcastDayly, "http://api.openweathermap.org/data/2.5/%s?q=%s,%s&APPID=%s&mode=json&units=%s&lang=%s&cnt=%d", "forecast", city, countryCode, apikey, "M", "EN", 10);
+//    sprintf(requeSendDataForcastDayly, "http://api.openweathermap.org/data/2.5/%s?lat=%f&lon=%f&APPID=%s&mode=json&units=%s&lang=%s&cnt=%d", "forecast", lat, lon, apikey, "M", "EN", 10);
     sprintf(requeSendDataOneCall, "http://api.openweathermap.org/data/2.5/%s?lat=%f&lon=%f&APPID=%s&units=%s&lang=%s&exclude=minutely,alerts", "onecall", /*City, "RU", */lat, lon, apikey, "M", "EN");
+    sprintf(requeSendDataForcastDayly, "http://api.openweathermap.org/data/2.5/%s?lat=%f&lon=%f&APPID=%s&units=%s&lang=%s&exclude=minutely,alerts,daily,current", "onecall", /*City, "RU", */lat, lon, apikey, "M", "EN");
     //one call can get: current minutely, hourly, daily, alerts(usefull info but not only English
     //exclude minutely and alerts
 
@@ -235,6 +357,8 @@ int askWeather(OpenWeather *veather)
     ESP_LOGI("HTTP", "ststus %d", status);
     if( xSemaphoreTake( xSemaphoreDataIsGet, portMAX_DELAY ) == pdTRUE )
     {
+        if(root == NULL)
+            return -1;
         getWetharData(root, veather);
         ESP_LOGI("weathe", "ok res weather");
         cJSON_Delete(root);
@@ -250,6 +374,8 @@ int askWeatherDayly(OpenWeather *veather)
     ESP_LOGI("HTTP", "ststus %d", status);
     if( xSemaphoreTake( xSemaphoreDataIsGet, portMAX_DELAY ) == pdTRUE )
     {
+        if(root == NULL)
+            return -1;
         getWetharData(root, veather);
         ESP_LOGI("weathe", "ok res weather");
         cJSON_Delete(root);
@@ -266,6 +392,9 @@ int askWeatherOneCall(OpenWeather *current, OpenWeather *dayly, int days, OpenWe
     ESP_LOGI("HTTP", "ststus %d", status);
     if( xSemaphoreTake( xSemaphoreDataIsGet, portMAX_DELAY ) == pdTRUE )
     {
+        ESP_LOGI("weathe", "begin analize weather");
+        if(root == NULL)
+            return -1;
         getWetharOneCallData(root, current, dayly, days, hourly, houres);
         ESP_LOGI("weathe", "ok res weather");
         cJSON_Delete(root);
@@ -300,6 +429,89 @@ void printOpenWeather(OpenWeather weather)
     ESP_LOGI("weathe", "sunrise %d", weather.sunrise);
     ESP_LOGI("weathe", "sunset %d", weather.sunset);
     ESP_LOGI("weathe", "sunset %d", (int)(weather.phaseMoon*24));
+}
+
+int getImageGuiWheather(OpenWeather weather)
+{
+    int res = 39;
+
+    switch (weather.code) {
+        case 200:
+        case 201:
+        case 202:
+        case 210:
+        case 211:
+        case 212:
+        case 221: res = 11; break;
+        case 230:
+        case 231:
+        case 232: res = 12; break;
+
+
+        case 300:
+        case 301:
+        case 302:
+        case 310:
+        case 311:
+        case 312:
+        case 313:
+        case 314:
+        case 321: res = 10; break;
+
+        case 500:
+        case 501: res = 13; break;
+
+        case 520: res = 14; break;
+        case 502:
+        case 503: res = 15; break;
+        case 504: res = 17; break;
+        case 521:
+        case 522:
+        case 531: res = 16; break;
+
+        case 511: res = 19; break;
+
+        case 600: res = 22; break;
+        case 601: res = 23; break;
+        case 602: res = 24; break;
+        case 620: res = 23; break;
+        case 621: res = 24; break;
+        case 622: res = 25; break;
+
+        case 611:
+        case 612:
+        case 613:
+        case 615:
+        case 616: res = 20; break;
+
+        case 701: res = 30; break;
+        case 711: res = 30; break;
+        case 721: res = 30; break;
+        case 731: res = 28; break;
+        case 741: res = 30; break;
+        case 751: res = 31; break;
+        case 761: res = 26; break;
+        case 762: res = 31; break;
+        case 771: res = 35; break;
+        case 781: res = 36; break;
+
+        case 800:
+            if(weather.weatherIcon[2] == 'd')   res = 0;
+            else                                res = 1;
+            break;
+        case 801:
+            if(weather.weatherIcon[2] == 'd')   res = 5;
+            else                                res = 6;
+            break;
+        case 802:
+        case 803:
+        case 804: res = 4; break; /*9*/
+
+    default: res = 39; break;
+
+    }
+
+    return res;
 }
 
 Image getImageWheather(OpenWeather weather, bool big)

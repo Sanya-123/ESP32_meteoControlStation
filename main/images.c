@@ -55,6 +55,7 @@ extern const uint8_t _18_1x_bin_start[] asm("_binary_18_1x_bin_start");
 extern const uint8_t _19_1x_bin_start[] asm("_binary_19_1x_bin_start");
 extern const uint8_t _20_1x_bin_start[] asm("_binary_20_1x_bin_start");
 extern const uint8_t _21_1x_bin_start[] asm("_binary_21_1x_bin_start");
+extern const uint8_t _22_1x_bin_start[] asm("_binary_22_1x_bin_start");
 extern const uint8_t _25_1x_bin_start[] asm("_binary_25_1x_bin_start");
 extern const uint8_t _35_1x_bin_start[] asm("_binary_35_1x_bin_start");
 extern const uint8_t _36_1x_bin_start[] asm("_binary_36_1x_bin_start");
@@ -282,13 +283,13 @@ const lv_img_dsc_t _21_1x = {
 };
 
 const lv_img_dsc_t _22_1x = {
-  .header.cf = LV_IMG_CF_RAW_ALPHA,
+  .header.cf = /*LV_IMG_CF_RAW_ALPHA*/LV_IMG_CF_TRUE_COLOR_ALPHA,
   .header.always_zero = 0,
   .header.reserved = 0,
   .header.w = 58,
   .header.h = 55,
-  .data_size = 1503,
-  .data = _22_1x_png_start,
+  .data_size = /*1503*/3190 * LV_IMG_PX_SIZE_ALPHA_BYTE,
+  .data = /*_22_1x_png_start*/_22_1x_bin_start + 4,
 };
 
 const lv_img_dsc_t _23_1x = {

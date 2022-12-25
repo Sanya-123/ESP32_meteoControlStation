@@ -47,7 +47,7 @@
 #include "csevent.h"
 
 #define WHEATHER_DAYS_READ      SIZE_FORCAST
-#define WHEATHER_HOUR_READ      STEP_FORCAST_HOUR*SIZE_FORCAST
+#define WHEATHER_HOUR_READ      SIZE_FORCAST
 
 #define EXT_NRF_SIZE            SIZE_EXT_DATA
 
@@ -74,7 +74,24 @@ uint16_t co2Val;
 
 uint8_t NRF_ConnectedDevice = 0;//Read from mem
 uint64_t localPipe;
+static bool sendAddNewNRF = false;
 
+//print usage
+#define MY_TASK_SIZE        10
+TaskHandle_t myTasksHendle[MY_TASK_SIZE] = {NULL};
+
+void printInfoAbouTask(TaskHandle_t handleTask)//функция выводящая информацию о 1 таске
+{
+    //************************************info************************************
+    TaskStatus_t status;
+    vTaskGetInfo(handleTask, &status, pdTRUE, eInvalid);
+
+    ESP_LOGI("FreeRTOS", "+--------------------------------+");
+    ESP_LOGI("FreeRTOS", "Task name:%s", status.pcTaskName);
+    ESP_LOGI("FreeRTOS", "Size FREE:%d", status.usStackHighWaterMark);
+    ESP_LOGI("FreeRTOS", "+--------------------------------+");
+    //************************************************************************
+}
 
 int reciveSMD(char *rx, char *tx, int n)//recive from wi-fi
 {
@@ -170,6 +187,8 @@ void taskDisplay(void *p)
 
 ////    setCO2(0);
 //    vTaskDelay(1000/portTICK_RATE_MS);
+    time_t _now;
+    struct tm* localtm;
 
     while(1)
     {
@@ -215,6 +234,10 @@ void taskDisplay(void *p)
         setTemperature(temp);
         setPressure(pressure);
         setCO2(co2Val);
+        _now = time(0);
+        localtm = localtime(&_now);
+        setTime(localtm->tm_hour, localtm->tm_min);
+        setDate(localtm->tm_mday, localtm->tm_mon + 1, localtm->tm_year + 1900);
 //        testMoon();
 //        setWheather(&weatherCurent);
 
@@ -335,6 +358,12 @@ void taskButton(void *p)
             meteoButtonClicked(ButtonSettings, Bmenu ? ButtonPresed : ButtonRealesed);
 //            gpio_set_level(GPIO_BUZZ_ON, Bmenu ? 1 : 0);
 //            mcpwm_set_duty(MCPWM_UNIT_0, MCPWM_TIMER_0, MCPWM0A, Bmenu ? 10.0 : 0.0);
+
+//            if(!Bmenu)
+//            {
+//                for(int i = 0 ; i < MY_TASK_SIZE; i++)
+//                    printInfoAbouTask(myTasksHendle[i]);
+//            }
         }
 
         if(oldBback != Bback)
@@ -398,11 +427,12 @@ void task_co2(void *p)
 //extern spi_bus_config_t buscfg;
 void addNewNRF(void)
 {
-    ESP_LOGI("NRF", "Add new dev");
-    uint8_t buffTx[8] = {0};
-    uint64_t newPipe = localPipe + NRF_ConnectedDevice + 1;
-    memcpy(buffTx, &newPipe, 5);
-    writeData(buffTx, 8);
+    sendAddNewNRF = true;
+//    ESP_LOGI("NRF", "Add new dev");
+//    uint8_t buffTx[8] = {0};
+//    uint64_t newPipe = localPipe + NRF_ConnectedDevice + 1;
+//    memcpy(buffTx, &newPipe, 5);
+//    writeData(buffTx, 8);
 }
 
 void nRF24_new_task(void *pvParameters)
@@ -459,6 +489,7 @@ void nRF24_new_task(void *pvParameters)
 //    uint8_t buffTx[8] = {0x12, 0x59, 0xA7, 0x6C, 0x4E, 0xF0, 0x70, 0x33};
     int status;
 
+    //
     ESP_LOGI("NRF", "add ext fnction");
     setAddExternal(addNewNRF);//set function on add button
 
@@ -470,13 +501,23 @@ void nRF24_new_task(void *pvParameters)
     while(1)
     {
         vTaskDelay(10/portTICK_RATE_MS);
+
+        //check flasg send new dev
+        if(sendAddNewNRF)
+        {
+            vTaskDelay(100/portTICK_RATE_MS);
+            ESP_LOGI("NRF", "Add new dev");
+            uint8_t buffTx[8] = {0};
+            uint64_t newPipe = localPipe + NRF_ConnectedDevice + 1;
+            memcpy(buffTx, &newPipe, 5);
+//            writeData(buffTx, 8);//this doesn't work becouse i disable tx irq
+            startFastWrite(buffTx, 8, 0, 0);
+            sendAddNewNRF = false;
+        }
+
         if(gpio_get_level(GPIO_NRF_IRQ))//if set 1 rx is empty
             continue;
-//        if(!availableMy())
-//        {
 
-//        }
-//        else
         ESP_LOGI("NRF", "ststus change");
         if(availableMy())
         {
@@ -498,7 +539,15 @@ void nRF24_new_task(void *pvParameters)
                 ESP_LOGI("NRF", "data[%d]=%d", i, buff[i]);
             }
             //TODO convet input data
-            //write it in display
+            int16_t datai16[4];
+            memcpy(datai16, buff, 8);
+            if(numPipeFromStatus == 0)
+            {
+                setExtTemp(0, datai16[0]/10);
+                setExtHumm(0, datai16[1]/10);
+                setExtBat(0, datai16[3]/33);//TODO add define voltate
+            }
+            //TODO write it in display
         }
         else
             whatHappened();//clear status
@@ -553,6 +602,8 @@ void locationTask(void *p)
 
     sendEvent(EVENT_LOCATION_GET);
 
+    printInfoAbouTask(NULL);
+
     vTaskDelete(NULL);
 }
 
@@ -576,10 +627,11 @@ void weatherTask(void *p)
     {
 
         ESP_LOGI("weather", "begin read weather");
-//        if(askWeatherOneCall(&weatherCurent, weatherDayli, WHEATHER_DAYS_READ, weatherHourly, WHEATHER_HOUR_READ) == 0)
-        if(askWeather(&weatherCurent) == 0)
+        if(askWeatherOneCall(&weatherCurent, weatherDayli, WHEATHER_DAYS_READ, weatherHourly, WHEATHER_HOUR_READ) == 0)
+//        if(askWeather(&weatherCurent) == 0)
+//        if(askWeatherDayly(weatherDayli) == 0)
         {
-            printOpenWeather(weatherCurent);
+//            printOpenWeather(weatherCurent);
 
             //set update time
             _now = time(0);
@@ -591,7 +643,23 @@ void weatherTask(void *p)
             setWeatherCurentTemp((int)weatherCurent.temp);
             setWeatherCurentTempFell((int)weatherCurent.feels_like);
             setWeatherCurentHummidity((int)weatherCurent.humidity);
+            setWeatherCurentPicture(getImageGuiWheather(weatherCurent));
 
+            ESP_LOGI("weather", "curent %d", weatherCurent.code);
+
+            for(int i = 0; i < WHEATHER_HOUR_READ; i++)
+            {
+                setForcastHTemp(i, weatherHourly[i].temp);
+                setForcastHPicture(i, getImageGuiWheather(weatherHourly[i]));
+                ESP_LOGI("weather", "hout %d:%d", i, weatherHourly[i].code);
+            }
+
+            for(int i = 0; i < WHEATHER_DAYS_READ; i++)
+            {
+                setForcastDTemp(i, weatherDayli[i].temp);
+                setForcastDPicture(i, getImageGuiWheather(weatherDayli[i]));
+                ESP_LOGI("weather", "day %d:%d", i, weatherDayli[i].code);
+            }
 
 
 //            ESP_LOGI("weather", "day 0");
@@ -606,7 +674,7 @@ void weatherTask(void *p)
 //            ESP_LOGI("weather", "day 7");
 //            printOpenWeather(weatherHourly[7]);
         }
-        vTaskDelay(60000/portTICK_RATE_MS);//1min
+        vTaskDelay(3600000/portTICK_RATE_MS);//1hour
     }
 }
 
@@ -756,18 +824,24 @@ void app_main(void)
     initFlash();
     initGroupCSevent();
 
-
 //    esp_log_level_set("CO2", ESP_LOG_VERBOSE);
 //    esp_log_level_set("CO2", ESP_LOG_DEBUG);
 //    esp_log_level_set("CO2", ESP_LOG_INFO);
 //    esp_log_level_set("CO2", ESP_LOG_WARN);
 //    esp_log_level_set("CO2", ESP_LOG_ERROR);
 
+//    heap_caps_print_heap_info(MALLOC_CAP_8BIT | MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_IRAM_8BIT | MALLOC_CAP_RETENTION);
+
+//    ESP_LOGI("Memory", "Total size MALLOC_CAP_8BIT:%d", heap_caps_get_total_size(MALLOC_CAP_8BIT));
+//    ESP_LOGI("Memory", "Total size MALLOC_CAP_DMA:%d", heap_caps_get_total_size(MALLOC_CAP_DMA));
+//    ESP_LOGI("Memory", "Total size MALLOC_CAP_INTERNAL:%d", heap_caps_get_total_size(MALLOC_CAP_INTERNAL));
+//    ESP_LOGI("Memory", "Total size MALLOC_CAP_IRAM_8BIT:%d", heap_caps_get_total_size(MALLOC_CAP_IRAM_8BIT));
+//    ESP_LOGI("Memory", "Total size MALLOC_CAP_RETENTION:%d", heap_caps_get_total_size(MALLOC_CAP_RETENTION));
 
 //    semaphoreDisplayChange = xSemaphoreCreateBinary();
 //    semaphoreDisplayNextState = xSemaphoreCreateBinary();
 //    xTaskCreatePinnedToCore(guiTask, "gui", 4096*2, NULL, 0, NULL, 1); 
-    xTaskCreate(guiTask, "gui", 4096*2, drowDisplayLVGL, 1, NULL);
+    xTaskCreate(guiTask, "gui", 4096, drowDisplayLVGL, 1, &myTasksHendle[0]);
     setSaveConfig(saveGuiSittings);
 
 //    vTaskDelay(1000);
@@ -782,14 +856,14 @@ void app_main(void)
 //    vTaskDelay(1000/portTICK_RATE_MS);
 
 
-    xTaskCreate(locationTask, "location", 4096, NULL, 1, NULL);
-    xTaskCreate(weatherTask, "openWeathre", 4096*1, NULL, 1, NULL);
-//    xTaskCreate(nRF24_new_task, "nrf", 4096, NULL, 2, NULL);
-    xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, NULL);
-    xTaskCreate(taskBME, "BME", 2048, NULL, 2, NULL);
-    xTaskCreate(taskButton, "Button", 2048, NULL, 2, NULL);
-    xTaskCreate(task_co2, "co2", 2048, NULL, 2, NULL);
-//    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, NULL);
+    xTaskCreate(locationTask, "location", 3072, NULL, 1, &myTasksHendle[1]);
+    xTaskCreate(weatherTask, "openWeathre", 4096, NULL, 3, &myTasksHendle[2]);
+    xTaskCreate(nRF24_new_task, "nrf", 3072, NULL, 2, &myTasksHendle[3]);
+    xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, &myTasksHendle[4]);
+    xTaskCreate(taskBME, "BME", 2048, NULL, 2, &myTasksHendle[5]);
+    xTaskCreate(taskButton, "Button", 2048, NULL, 2, &myTasksHendle[6]);
+    xTaskCreate(task_co2, "co2", 2048, NULL, 2, &myTasksHendle[7]);
+//    xTaskCreate(task_MQTT, "MQTT", 2560, NULL, 2, &myTasksHendle[8]);
 
 
 
