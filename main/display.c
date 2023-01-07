@@ -44,6 +44,16 @@ const esp_timer_create_args_t periodic_timer_args = {
 };
 esp_timer_handle_t periodic_timer;
 
+bool takeGuiSem(uint32_t timeout)
+{
+    return xSemaphoreTake(xGuiSemaphore, timeout) == pdTRUE;
+}
+
+void giveGuiSem()
+{
+    xSemaphoreGive(xGuiSemaphore);
+}
+
 void guiTask(void *pvParameter)
 {
     void (*application)(void);
@@ -65,9 +75,11 @@ void guiTask(void *pvParameter)
         vTaskDelay(pdMS_TO_TICKS(10));
 
         /* Try to take the semaphore, call lvgl related function on success */
-        if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) {
+        if(takeGuiSem(portMAX_DELAY)) {
+//        if (pdTRUE == xSemaphoreTake(xGuiSemaphore, portMAX_DELAY)) {
             lv_task_handler();
-            xSemaphoreGive(xGuiSemaphore);
+//            xSemaphoreGive(xGuiSemaphore);
+            giveGuiSem();
        }
     }
 

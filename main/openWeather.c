@@ -159,9 +159,9 @@ static int download_callback(request_t *req, char *data, int len)
             free(downloadData);
             downloadData = NULL;
 
-            ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
-            ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
-            ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
+//            ESP_LOGI("Memory", "Free heap size %d", esp_get_free_heap_size());
+//            ESP_LOGI("Memory", "Free internal heap size %d", esp_get_free_internal_heap_size());
+//            ESP_LOGI("Memory", "Free minimum heap size %d", esp_get_minimum_free_heap_size());
 
             ESP_LOGI("HTTP","OK cJSON_Parse");
 

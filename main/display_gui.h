@@ -70,6 +70,8 @@ typedef struct
     bool darkTheme;
 }SettignDisplay;
 
+//NOTE recomendate use semaphore when set display data
+
 /**********************
  * GLOBAL PROTOTYPES
  **********************/

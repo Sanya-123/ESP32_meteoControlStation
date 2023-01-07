@@ -230,6 +230,10 @@ void taskDisplay(void *p)
 //                print_imTestG2();
 //        }
         vTaskDelay(1000/portTICK_RATE_MS);
+
+        if(!takeGuiSem(1000/portTICK_RATE_MS))
+            continue;
+
         setHumiditi(humidity);
         setTemperature(temp);
         setPressure(pressure);
@@ -238,6 +242,8 @@ void taskDisplay(void *p)
         localtm = localtime(&_now);
         setTime(localtm->tm_hour, localtm->tm_min);
         setDate(localtm->tm_mday, localtm->tm_mon + 1, localtm->tm_year + 1900);
+
+        giveGuiSem();
 //        testMoon();
 //        setWheather(&weatherCurent);
 
@@ -543,9 +549,14 @@ void nRF24_new_task(void *pvParameters)
             memcpy(datai16, buff, 8);
             if(numPipeFromStatus == 0)
             {
-                setExtTemp(0, datai16[0]/10);
-                setExtHumm(0, datai16[1]/10);
-                setExtBat(0, datai16[3]/33);//TODO add define voltate
+                if(takeGuiSem(200/portTICK_RATE_MS))
+                {
+                    setExtTemp(0, datai16[0]/10);
+                    setExtHumm(0, datai16[1]/10);
+                    setExtBat(0, datai16[3]/33);//TODO add define voltate
+
+                    giveGuiSem();
+                }
             }
             //TODO write it in display
         }
@@ -623,6 +634,24 @@ void weatherTask(void *p)
         vTaskDelete(NULL);
     }
 
+    //test
+//    int im = 0;
+//    while(1)
+//    {
+//        for(int i = 0; i < 4; i++)
+//        {
+//            setForcastHPicture(i, im++);
+//            if(im == 40)    im = 0;
+//        }
+//        for(int i = 0; i < 4; i++)
+//        {
+//            setForcastDPicture(i, im++);
+//            if(im == 40)    im = 0;
+//        }
+//        ESP_LOGI("weather", "test update");
+//        vTaskDelay(10000/portTICK_RATE_MS);
+//    }
+
     while(1)
     {
 
@@ -637,28 +666,34 @@ void weatherTask(void *p)
             _now = time(0);
             localtm = localtime(&_now);
 
-            setWeatherUpdateTime(localtm->tm_hour, localtm->tm_min);
-
-            //set weather to display
-            setWeatherCurentTemp((int)weatherCurent.temp);
-            setWeatherCurentTempFell((int)weatherCurent.feels_like);
-            setWeatherCurentHummidity((int)weatherCurent.humidity);
-            setWeatherCurentPicture(getImageGuiWheather(weatherCurent));
-
-            ESP_LOGI("weather", "curent %d", weatherCurent.code);
-
-            for(int i = 0; i < WHEATHER_HOUR_READ; i++)
+            if(takeGuiSem(1000/portTICK_RATE_MS))
             {
-                setForcastHTemp(i, weatherHourly[i].temp);
-                setForcastHPicture(i, getImageGuiWheather(weatherHourly[i]));
-                ESP_LOGI("weather", "hout %d:%d", i, weatherHourly[i].code);
-            }
 
-            for(int i = 0; i < WHEATHER_DAYS_READ; i++)
-            {
-                setForcastDTemp(i, weatherDayli[i].temp);
-                setForcastDPicture(i, getImageGuiWheather(weatherDayli[i]));
-                ESP_LOGI("weather", "day %d:%d", i, weatherDayli[i].code);
+                setWeatherUpdateTime(localtm->tm_hour, localtm->tm_min);
+
+                //set weather to display
+                setWeatherCurentTemp((int)weatherCurent.temp);
+                setWeatherCurentTempFell((int)weatherCurent.feels_like);
+                setWeatherCurentHummidity((int)weatherCurent.humidity);
+                setWeatherCurentPicture(getImageGuiWheather(weatherCurent));
+
+                ESP_LOGI("weather", "curent %d", weatherCurent.code);
+
+                for(int i = 0; i < WHEATHER_HOUR_READ; i++)
+                {
+                    setForcastHTemp(i, weatherHourly[i].temp);
+                    setForcastHPicture(i, getImageGuiWheather(weatherHourly[i]));
+                    ESP_LOGI("weather", "hout %d:%d", i, weatherHourly[i].code);
+                }
+
+                for(int i = 0; i < WHEATHER_DAYS_READ; i++)
+                {
+                    setForcastDTemp(i, weatherDayli[i].temp);
+                    setForcastDPicture(i, getImageGuiWheather(weatherDayli[i]));
+                    ESP_LOGI("weather", "day %d:%d", i, weatherDayli[i].code);
+                }
+
+                giveGuiSem();
             }
 
 
@@ -859,7 +894,7 @@ void app_main(void)
     xTaskCreate(locationTask, "location", 3072, NULL, 1, &myTasksHendle[1]);
     xTaskCreate(weatherTask, "openWeathre", 4096, NULL, 3, &myTasksHendle[2]);
     xTaskCreate(nRF24_new_task, "nrf", 3072, NULL, 2, &myTasksHendle[3]);
-    xTaskCreate(taskDisplay, "Display", 2048, NULL, 1, &myTasksHendle[4]);
+    xTaskCreate(taskDisplay, "Display", /*2048*/3072, NULL, /*1*/3, &myTasksHendle[4]);//FIXME
     xTaskCreate(taskBME, "BME", 2048, NULL, 2, &myTasksHendle[5]);
     xTaskCreate(taskButton, "Button", 2048, NULL, 2, &myTasksHendle[6]);
     xTaskCreate(task_co2, "co2", 2048, NULL, 2, &myTasksHendle[7]);
